@@ -29,6 +29,13 @@ class UserRepoImpl implements UserRepository {
   }
 
   @override
+  Future<User> signInWithGoogle() async {
+    final model = await remote.signInWithGoogle();
+    await local.cacheUser(model.toMap());
+    return model;
+  }
+
+  @override
   Future<void> logout() async {
     await remote.signOut();
     await local.clearUser();
@@ -50,5 +57,25 @@ class UserRepoImpl implements UserRepository {
         await local.cacheUser(user.toMap());
       }
     }
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    await remote.sendEmailVerification();
+  }
+
+  @override
+  Future<bool> isEmailVerified() async {
+    return await remote.isEmailVerified();
+  }
+
+  @override
+  Future<void> reloadUser() async {
+    await remote.reloadUser();
+  }
+
+  @override
+  Future<void> resetPassword(String email) async {
+    await remote.resetPassword(email);
   }
 }
