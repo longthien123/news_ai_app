@@ -1,34 +1,42 @@
+import 'package:app_news_ai/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 // Import auth files
 import 'features/auth/data/datasources/local/user_local_source.dart';
 import 'features/auth/data/datasources/remote/user_remote_source.dart';
 import 'features/auth/data/repositories/user_repo_impl.dart';
-//import 'features/auth/domain/repositories/user_repository.dart';
 import 'features/auth/domain/usecases/login_usecase.dart';
 import 'features/auth/domain/usecases/register_usecase.dart';
 import 'features/auth/domain/usecases/update_profile_usecase.dart';
+import 'features/auth/domain/usecases/google_signin_usecase.dart';
+import 'features/auth/domain/usecases/forgot_password_usecase.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
-
+import 'features/auth/presentation/pages/email_verification_page.dart';
+import 'features/auth/presentation/pages/forgot_password_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  
+
+  // Khởi tạo Firebase đúng cách cho Web + Mobile
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
-  
+
   runApp(MyApp(prefs: prefs));
 }
 
 class MyApp extends StatelessWidget {
   final SharedPreferences prefs;
-  
+
   const MyApp({super.key, required this.prefs});
 
   @override
@@ -36,22 +44,27 @@ class MyApp extends StatelessWidget {
     // Setup dependencies
     final userRemoteSource = UserRemoteSourceImpl();
     final userLocalSource = UserLocalSourceImpl(prefs: prefs);
+
     final userRepository = UserRepoImpl(
       remote: userRemoteSource,
       local: userLocalSource,
     );
-    
+
     final loginUsecase = LoginUsecase(userRepository);
     final registerUsecase = RegisterUsecase(userRepository);
     final updateProfileUsecase = UpdateProfileUsecase(userRepository);
+    final googleSignInUsecase = GoogleSignInUsecase(userRepository);
+    final forgotPasswordUsecase = ForgotPasswordUsecase(userRepository);
 
     return BlocProvider(
       create: (context) => AuthCubit(
         loginUsecase: loginUsecase,
         registerUsecase: registerUsecase,
         updateProfileUsecase: updateProfileUsecase,
+        googleSignInUsecase: googleSignInUsecase,
+        forgotPasswordUsecase: forgotPasswordUsecase,
         repository: userRepository,
-      )..checkAuth(), // Check if user is already logged in
+      )..checkAuth(),
       child: MaterialApp(
         title: 'News App',
         debugShowCheckedModeBanner: false,
@@ -64,14 +77,23 @@ class MyApp extends StatelessWidget {
           '/': (context) => const AuthWrapper(),
           '/login': (context) => const LoginPage(),
           '/register': (context) => const RegisterPage(),
+          '/forgot-password': (context) => const ForgotPasswordPage(),
           '/home': (context) => const MyHomePage(title: 'Home Page'),
+        },
+        onGenerateRoute: (settings) {
+          if (settings.name == '/email-verification') {
+            final email = settings.arguments as String;
+            return MaterialPageRoute(
+              builder: (context) => EmailVerificationPage(email: email),
+            );
+          }
+          return null;
         },
       ),
     );
   }
 }
 
-// Wrapper to check authentication status
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({Key? key}) : super(key: key);
 
@@ -81,9 +103,7 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, state) {
         if (state is AuthLoading) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         } else if (state is Authenticated) {
           return const MyHomePage(title: 'Home Page');
@@ -95,7 +115,6 @@ class AuthWrapper extends StatelessWidget {
   }
 }
 
-// Home Page (sau khi đăng nhập thành công)
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key, required this.title});
 
