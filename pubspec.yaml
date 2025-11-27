@@ -40,7 +40,9 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   google_sign_in: ^6.2.1
-  cloud_firestore: ^5.4.4
+  cloud_firestore: ^5.6.12
+  
+  http: ^1.1.0
 
   # State Management
   flutter_bloc: ^8.1.3
