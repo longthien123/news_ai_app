@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      // Allow users to read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow users to create their own document
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Bookmarks subcollection
+      match /bookmarks/{newsId} {
+        // Allow users to read, create, and delete their own bookmarks
+        allow read, create, delete: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // News collection (assuming you have this for reading news)
+    match /news/{newsId} {
+      // Allow anyone to read news
+      allow read: if true;
+      
+      // Only allow admins to write (adjust based on your needs)
+      allow write: if false;
+      
+      // Comments subcollection
+      match /comments/{commentId} {
+        // Allow anyone to read comments
+        allow read: if true;
+        
+        // Allow authenticated users to create comments
+        allow create: if request.auth != null 
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.newsId is string
+                      && request.resource.data.content is string
+                      && request.resource.data.userName is string;
+        
+        // Allow users to update and delete their own comments
+        allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      }
+    }
+  }
+}
