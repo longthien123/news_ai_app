@@ -18,6 +18,7 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
 import 'features/auth/presentation/pages/email_verification_page.dart';
 import 'features/auth/presentation/pages/forgot_password_page.dart';
+import 'features/news/presentation/pages/news_home_page.dart';
 
 // Import news files
 import 'features/admin/data/datasources/local/news_local_source.dart';
@@ -105,8 +106,7 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginPage(),
           '/register': (context) => const RegisterPage(),
           '/forgot-password': (context) => const ForgotPasswordPage(),
-          '/home': (context) => const MyHomePage(title: 'Home Page'),
-          '/add-news': (context) => const AddNewsPage(),
+          '/home': (context) => const NewsHomePage(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/email-verification') {
@@ -134,84 +134,11 @@ class AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         } else if (state is Authenticated) {
-          return const MyHomePage(title: 'Home Page');
+          return const NewsHomePage();
         } else {
           return const LoginPage();
         }
       },
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(title),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthCubit>().logout();
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<AuthCubit, AuthState>(
-        builder: (context, state) {
-          if (state is Authenticated) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Chào mừng!',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Email: ${state.user.email}',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  if (state.user.name != null)
-                    Text(
-                      'Tên: ${state.user.name}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  const SizedBox(height: 32),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/add-news');
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Thêm tin tức'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<AuthCubit>().logout();
-                    },
-                    child: const Text('Đăng xuất'),
-                  ),
-                ],
-              ),
-            );
-          }
-          return const Center(child: Text('Không có thông tin user'));
-        },
-      ),
     );
   }
 }
