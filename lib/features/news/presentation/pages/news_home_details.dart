@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
 import '../../domain/entities/news.dart';
 import '../../domain/entities/comment.dart';
 import '../../domain/entities/reply.dart';
@@ -9,10 +10,12 @@ import '../../data/models/reply_model.dart';
 import '../../../../core/local/firebase_bookmark_manager.dart';
 import '../../data/datasources/remote/news_remote_source.dart';
 import '../../data/repositories/news_repo_impl.dart';
+import '../../domain/usecases/increment_view_usecase.dart';
 import '../widgets/news_details_widgets.dart';
 import '../widgets/ai_summary_button.dart';
 import '../widgets/ai_summary_bottom_sheet.dart';
 import '../../data/datasources/remote/ai_summary_service.dart';
+import '../../../../core/utils/tts_service.dart';
 
 class NewsDetailPage extends StatefulWidget {
   final News news;
@@ -47,6 +50,14 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   // AI Summary related
   final AISummaryService _aiSummaryService = AISummaryServiceImpl();
 
+  // View tracking related
+  Timer? _viewTimer;
+  bool _hasIncrementedView = false;
+
+  // TTS related
+  final TtsService _ttsService = TtsService();
+  bool _isTtsPlaying = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,13 +66,47 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     _loadRelatedNews();
     _loadComments();
     _loadLikedComments();
+    _startViewTimer();
+    _ttsService.initialize();
   }
 
   @override
   void dispose() {
+    _viewTimer?.cancel();
     _commentController.dispose();
     _replyController.dispose();
+    _ttsService.dispose();
     super.dispose();
+  }
+
+  void _startViewTimer() {
+    _viewTimer = Timer(const Duration(seconds: 10), () {
+      if (!_hasIncrementedView) {
+        _incrementViewCount();
+      }
+    });
+  }
+
+  Future<void> _incrementViewCount() async {
+    if (_hasIncrementedView) return;
+
+    try {
+      final remoteSource = NewsRemoteSourceImpl(
+        firestore: FirebaseFirestore.instance,
+      );
+      final repository = NewsRepositoryImpl(remoteSource: remoteSource);
+      final incrementViewUseCase = IncrementViewUseCase(repository: repository);
+
+      await incrementViewUseCase(widget.news.id);
+      
+      setState(() {
+        _hasIncrementedView = true;
+      });
+
+      debugPrint('View count incremented for news: ${widget.news.id}');
+    } catch (e) {
+      debugPrint('Error incrementing view count: $e');
+    }
   }
 
   Future<void> _initBookmark() async {
@@ -125,9 +170,12 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .orderBy('createdAt', descending: true)
           .get();
 
-      final comments = querySnapshot.docs
-          .map((doc) => CommentModel.fromFirestore(doc))
-          .toList();
+      // Load comments with updated usernames from users collection
+      final comments = await Future.wait(
+        querySnapshot.docs.map((doc) => 
+          CommentModel.fromFirestoreWithUserData(doc)
+        ),
+      );
 
       if (mounted) {
         setState(() {
@@ -299,9 +347,12 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .orderBy('createdAt', descending: false)
           .get();
 
-      final replies = repliesSnapshot.docs
-          .map((doc) => ReplyModel.fromFirestore(doc))
-          .toList();
+      // Load replies with updated usernames from users collection
+      final replies = await Future.wait(
+        repliesSnapshot.docs.map((doc) => 
+          ReplyModel.fromFirestoreWithUserData(doc)
+        ),
+      );
 
       if (mounted) {
         setState(() {
@@ -606,6 +657,46 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     );
   }
 
+  Future<void> _toggleTts() async {
+    try {
+      if (_isTtsPlaying) {
+        // Nếu đang phát thì dừng
+        await _ttsService.stop();
+        setState(() {
+          _isTtsPlaying = false;
+        });
+      } else {
+        // Nếu đang dừng thì phát
+        // Kết hợp title và content
+        final textToRead = '${widget.news.title}. ${widget.news.content}';
+        await _ttsService.speak(textToRead);
+        setState(() {
+          _isTtsPlaying = true;
+        });
+
+        // Kiểm tra định kỳ xem TTS đã dừng chưa
+        Timer.periodic(const Duration(milliseconds: 500), (timer) {
+          if (!_ttsService.isSpeaking && mounted) {
+            setState(() {
+              _isTtsPlaying = false;
+            });
+            timer.cancel();
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error toggling TTS: \$e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi phát giọng nói: \${e.toString()}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -623,6 +714,8 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                   onBack: () => Navigator.pop(context),
                   onToggleBookmark: _toggleBookmark,
                   onMore: () {},
+                  onToggleTts: _toggleTts,
+                  isTtsPlaying: _isTtsPlaying,
                 ),
 
                 // Content Section

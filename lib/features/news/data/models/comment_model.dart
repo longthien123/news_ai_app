@@ -27,6 +27,44 @@ class CommentModel extends Comment {
     );
   }
 
+  /// Factory method to create CommentModel with updated username from users collection
+  static Future<CommentModel> fromFirestoreWithUserData(
+    DocumentSnapshot doc,
+  ) async {
+    final data = doc.data() as Map<String, dynamic>;
+    final userId = data['userId'] ?? '';
+    
+    // Get updated username from users collection
+    String userName = data['userName'] ?? 'Anonymous';
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        // Priority: username > fullName > stored userName
+        userName = userData?['username'] ?? 
+                   userData?['fullName'] ?? 
+                   userName;
+      }
+    } catch (e) {
+      // If error, use the stored userName
+    }
+    
+    return CommentModel(
+      id: doc.id,
+      newsId: data['newsId'] ?? '',
+      userId: userId,
+      userName: userName,
+      content: data['content'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      likes: data['likes'] ?? 0,
+      repliesCount: data['repliesCount'] ?? 0,
+    );
+  }
+
   Map<String, dynamic> toFirestore() {
     return {
       'newsId': newsId,
