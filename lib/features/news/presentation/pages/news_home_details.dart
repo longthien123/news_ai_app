@@ -13,6 +13,7 @@ import '../widgets/news_details_widgets.dart';
 import '../widgets/ai_summary_button.dart';
 import '../widgets/ai_summary_bottom_sheet.dart';
 import '../../data/datasources/remote/ai_summary_service.dart';
+import '../../../notification/data/models/reading_session_model.dart';
 
 class NewsDetailPage extends StatefulWidget {
   final News news;
@@ -47,6 +48,12 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   // AI Summary related
   final AISummaryService _aiSummaryService = AISummaryServiceImpl();
 
+  // Reading session tracking
+  String? _sessionId;
+  DateTime? _startedAt;
+  final ScrollController _scrollController = ScrollController();
+  bool _isScrolledToBottom = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,13 +62,78 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     _loadRelatedNews();
     _loadComments();
     _loadLikedComments();
+    _startReadingSession();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _commentController.dispose();
     _replyController.dispose();
+    _scrollController.dispose();
+    _endReadingSession();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 100) {
+      if (!_isScrolledToBottom) {
+        setState(() => _isScrolledToBottom = true);
+      }
+    }
+  }
+
+  Future<void> _startReadingSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}_${widget.news.id}';
+    _startedAt = DateTime.now();
+
+    final session = ReadingSessionModel(
+      userId: user.uid,
+      newsId: widget.news.id,
+      category: widget.news.category,
+      title: widget.news.title,
+      startedAt: _startedAt!,
+      durationSeconds: 0,
+      isBookmarked: _isBookmarked,
+      isCompleted: false,
+    );
+
+    // Save to Firestore với id là sessionId
+    final sessionData = session.toJson();
+    sessionData['id'] = _sessionId; // Add id to JSON
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('readingSessions')
+        .doc(_sessionId)
+        .set(sessionData);
+
+    print('📖 Started reading session: ${widget.news.title.substring(0, 30)}...');
+  }
+
+  Future<void> _endReadingSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || _sessionId == null || _startedAt == null) return;
+
+    final duration = DateTime.now().difference(_startedAt!).inSeconds;
+
+    // Update session
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('readingSessions')
+        .doc(_sessionId)
+        .update({
+      'durationSeconds': duration,
+      'isBookmarked': _isBookmarked,
+      'isCompleted': _isScrolledToBottom,
+    });
+
+    print('📖 Ended reading session: ${duration}s, bookmarked: $_isBookmarked, completed: $_isScrolledToBottom');
   }
 
   Future<void> _initBookmark() async {
@@ -613,6 +685,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
       body: Stack(
         children: [
           SingleChildScrollView(
+            controller: _scrollController,
             child: Column(
               children: [
                 // Hero Image Section
