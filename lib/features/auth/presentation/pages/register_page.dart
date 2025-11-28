@@ -92,7 +92,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         controller: _nameController,
                         style: const TextStyle(fontSize: 14),
                         decoration: InputDecoration(
-                          hintText: 'Username',
+                          hintText: 'Tên người dùng',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: Colors.white,
@@ -165,7 +165,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscureText: _obscurePassword,
                         style: const TextStyle(fontSize: 14),
                         decoration: InputDecoration(
-                          hintText: 'Password',
+                          hintText: 'Mật khẩu',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: Colors.white,
@@ -215,7 +215,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscureText: _obscureConfirmPassword,
                         style: const TextStyle(fontSize: 14),
                         decoration: InputDecoration(
-                          hintText: 'Confirm Password',
+                          hintText: 'Xác nhận mật khẩu',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: Colors.white,
@@ -263,7 +263,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       Row(
                         children: [
                           Text(
-                            'I have read the ',
+                            'Tôi đã đọc ',
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 12,
@@ -274,7 +274,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               // TODO: Navigate to privacy policy page
                             },
                             child: const Text(
-                              'Privace Policy',
+                              'Chính sách bảo mật',
                               style: TextStyle(
                                 color: Color(0xFF0052CC),
                                 fontSize: 12,
@@ -319,7 +319,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               elevation: 0,
                             ),
                             child: const Text(
-                              'Sign Up',
+                              'Đăng ký',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -331,7 +331,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 32),
                       // Or sign in with
                       Text(
-                        'or sign in with',
+                        'hoặc đăng nhập bằng',
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 12,
@@ -368,7 +368,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               },
                             ),
                             label: const Text(
-                              'CONTINUE WITH GOOGLE',
+                              'ĐĂNG NHẬP BẰNG GOOGLE',
                               style: TextStyle(
                                 color: Colors.black87,
                                 fontSize: 12,
@@ -385,7 +385,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'ALREADY HAVE AN ACCOUNT? ',
+                            'BẠN ĐÃ CÓ TÀI KHOẢN? ',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontSize: 11,
@@ -402,7 +402,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: const Text(
-                              'SIGN IN',
+                              'ĐĂNG NHẬP',
                               style: TextStyle(
                                 color: Color(0xFF0052CC),
                                 fontSize: 11,

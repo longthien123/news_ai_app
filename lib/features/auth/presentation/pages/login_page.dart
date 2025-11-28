@@ -25,10 +25,18 @@ class _LoginPageState extends State<LoginPage> {
 
   void _login() {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthCubit>().login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      
+      // Kiểm tra tài khoản admin đặc biệt
+      if (email == 'adminnews@gmail.com' && password == 'admin123') {
+        // Vào thẳng trang admin mà không cần xác thực Firebase
+        Navigator.of(context).pushReplacementNamed('/admin');
+        return;
+      }
+      
+      // Đăng nhập bình thường qua Firebase
+      context.read<AuthCubit>().login(email, password);
     }
   }
 
@@ -39,6 +47,7 @@ class _LoginPageState extends State<LoginPage> {
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
+            // Đăng nhập thành công qua Firebase → vào trang home
             Navigator.of(context).pushReplacementNamed('/home');
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -168,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           child: Text(
-                            'Forgot Password?',
+                            'Quên mật khẩu đăng nhập?',
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 13,
@@ -196,7 +205,7 @@ class _LoginPageState extends State<LoginPage> {
                               elevation: 0,
                             ),
                             child: const Text(
-                              'Sign In',
+                              'Đăng nhập',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -208,7 +217,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 32),
                       // Or sign in with
                       Text(
-                        'or sign in with',
+                        'hoặc đăng nhập bằng',
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 12,
@@ -245,7 +254,7 @@ class _LoginPageState extends State<LoginPage> {
                               },
                             ),
                             label: const Text(
-                              'CONTINUE WITH GOOGLE',
+                              'ĐĂNG NHẬP BẰNG GOOGLE',
                               style: TextStyle(
                                 color: Colors.black87,
                                 fontSize: 12,
@@ -262,7 +271,7 @@ class _LoginPageState extends State<LoginPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'DON\'T HAVE AN ACCOUNT? ',
+                            'BẠN CHƯA CÓ TÀI KHOẢN? ',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontSize: 11,
@@ -279,10 +288,11 @@ class _LoginPageState extends State<LoginPage> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: const Text(
-                              'SIGN UP',
+                              'ĐĂNG KÝ',
                               style: TextStyle(
                                 color: Color(0xFF0052CC),
                                 fontSize: 11,
+                                fontWeight: FontWeight.w600
                               ),
                             ),
                           ),
