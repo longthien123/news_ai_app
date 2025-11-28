@@ -2,6 +2,7 @@ import 'package:app_news_ai/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Import auth files
@@ -28,7 +29,14 @@ import 'features/admin/domain/usecases/news/add_news_usecase.dart';
 import 'features/admin/domain/usecases/news/get_news_detail_usecase.dart';
 import 'features/admin/domain/usecases/news/get_news_usecase.dart';
 import 'features/admin/presentation/cubit/news_cubit.dart';
-import 'features/admin/presentation/pages/add_news_page.dart';
+
+
+import 'features/profile/data/datasources/profile_remote_datasource.dart';
+import 'features/profile/data/repositories/profile_repository_impl.dart';
+import 'features/profile/domain/usecases/get_profile_usecase.dart';
+import 'features/profile/domain/usecases/update_profile_usecase.dart';
+import 'features/profile/domain/usecases/upload_avatar_usecase.dart';
+import 'features/profile/presentation/cubit/profile_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +81,13 @@ class MyApp extends StatelessWidget {
     final getNewsDetailUsecase = GetNewsDetailUsecase(newsRepository);
     final getNewsUsecase = GetNewsUsecase(newsRepository);
 
+    // Setup Profile dependencies
+    final profileRemoteSource = ProfileRemoteDataSourceImpl(firestore: FirebaseFirestore.instance);
+    final profileRepository = ProfileRepositoryImpl(remoteDataSource: profileRemoteSource);
+    final getProfileUsecase = GetProfileUseCase(profileRepository);
+    final updateUserProfileUsecase = UpdateProfileUseCase(profileRepository);
+    final uploadAvatarUsecase = UploadAvatarUseCase(profileRepository);
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -90,6 +105,13 @@ class MyApp extends StatelessWidget {
             addNewsUsecase: addNewsUsecase,
             getNewsDetailUsecase: getNewsDetailUsecase,
             getNewsUsecase: getNewsUsecase,
+          ),
+        ),
+        BlocProvider(
+          create: (context) => ProfileCubit(
+            getProfileUseCase: getProfileUsecase,
+            updateProfileUseCase: updateUserProfileUsecase,
+            uploadAvatarUseCase: uploadAvatarUsecase,
           ),
         ),
       ],
