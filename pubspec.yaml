@@ -58,6 +58,8 @@ dependencies:
   google_generative_ai: ^0.4.6
   firebase_storage: ^12.4.10
   image_picker: ^1.2.1
+  url_launcher: ^6.3.0
+  share_plus: ^10.0.0
 
   # Text to Speech
   flutter_tts: ^4.2.0
