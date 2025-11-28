@@ -34,6 +34,15 @@
 
   <title>app_news_ai</title>
   <link rel="manifest" href="manifest.json">
+
+  <script>
+    // Check if Web Speech API is supported
+    if ('speechSynthesis' in window) {
+      console.log('Web Speech API is supported');
+    } else {
+      console.log('Web Speech API is NOT supported');
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

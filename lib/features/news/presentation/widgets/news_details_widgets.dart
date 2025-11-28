@@ -15,6 +15,8 @@ class NewsDetailHeroSection extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onToggleBookmark;
   final VoidCallback onMore;
+  final VoidCallback? onToggleTts;
+  final bool isTtsPlaying;
 
   const NewsDetailHeroSection({
     super.key,
@@ -24,6 +26,8 @@ class NewsDetailHeroSection extends StatelessWidget {
     required this.onBack,
     required this.onToggleBookmark,
     required this.onMore,
+    this.onToggleTts,
+    this.isTtsPlaying = false,
   });
 
   String _formatDate(DateTime date) {
@@ -85,6 +89,25 @@ class NewsDetailHeroSection extends StatelessWidget {
                 // Right Actions
                 Row(
                   children: [
+                    // TTS Button
+                    if (onToggleTts != null)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            isTtsPlaying
+                                ? Ionicons.pause
+                                : Ionicons.volume_high,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          onPressed: onToggleTts,
+                        ),
+                      ),
+                    if (onToggleTts != null) const SizedBox(width: 12),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.3),
