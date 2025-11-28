@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ionicons/ionicons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
@@ -16,6 +17,8 @@ import '../widgets/ai_summary_button.dart';
 import '../widgets/ai_summary_bottom_sheet.dart';
 import '../../data/datasources/remote/ai_summary_service.dart';
 import '../../../../core/utils/tts_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 class NewsDetailPage extends StatefulWidget {
   final News news;
@@ -697,6 +700,65 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     }
   }
 
+  Future<void> _showShareOptions() async {
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 16),
+              Text('Đang tạo tóm tắt AI để chia sẻ...'),
+            ],
+          ),
+          duration: Duration(seconds: 10), // Long duration, will hide manually
+        ),
+      );
+    }
+
+    try {
+      // 1. Generate AI Summary
+      final summary = await _aiSummaryService.summarizeNews(
+        widget.news.title,
+        widget.news.content,
+      );
+
+      // Hide loading SnackBar
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+
+      // 2. Construct Share Text
+      final shareText = '''
+${widget.news.title}
+
+TÓM TẮT BỞI AI:
+$summary
+
+Đọc chi tiết tại News AI App
+''';
+
+      // 3. Share using native share sheet
+      await Share.share(
+        shareText,
+        subject: widget.news.title,
+      );
+    } catch (e) {
+      debugPrint('Error sharing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi chia sẻ: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -713,7 +775,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                   isLoading: _isLoading,
                   onBack: () => Navigator.pop(context),
                   onToggleBookmark: _toggleBookmark,
-                  onMore: () {},
+                  onMore: _showShareOptions,
                   onToggleTts: _toggleTts,
                   isTtsPlaying: _isTtsPlaying,
                 ),

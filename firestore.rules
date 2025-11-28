@@ -5,11 +5,8 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      // Allow users to read their own document
-      allow read: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow users to create their own document
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Allow users to read, create, and update their own document
+      allow read, create, update: if request.auth != null && request.auth.uid == userId;
       
       // Bookmarks subcollection
       match /bookmarks/{newsId} {
