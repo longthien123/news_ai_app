@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ionicons/ionicons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:async';
 import '../../domain/entities/news.dart';
 import '../../domain/entities/comment.dart';
 import '../../domain/entities/reply.dart';
@@ -11,14 +9,11 @@ import '../../data/models/reply_model.dart';
 import '../../../../core/local/firebase_bookmark_manager.dart';
 import '../../data/datasources/remote/news_remote_source.dart';
 import '../../data/repositories/news_repo_impl.dart';
-import '../../domain/usecases/increment_view_usecase.dart';
 import '../widgets/news_details_widgets.dart';
 import '../widgets/ai_summary_button.dart';
 import '../widgets/ai_summary_bottom_sheet.dart';
 import '../../data/datasources/remote/ai_summary_service.dart';
-import '../../../../core/utils/tts_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../notification/data/models/reading_session_model.dart';
 
 class NewsDetailPage extends StatefulWidget {
   final News news;
@@ -53,13 +48,11 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   // AI Summary related
   final AISummaryService _aiSummaryService = AISummaryServiceImpl();
 
-  // View tracking related
-  Timer? _viewTimer;
-  bool _hasIncrementedView = false;
-
-  // TTS related
-  final TtsService _ttsService = TtsService();
-  bool _isTtsPlaying = false;
+  // Reading session tracking
+  String? _sessionId;
+  DateTime? _startedAt;
+  final ScrollController _scrollController = ScrollController();
+  bool _isScrolledToBottom = false;
 
   @override
   void initState() {
@@ -69,47 +62,78 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     _loadRelatedNews();
     _loadComments();
     _loadLikedComments();
-    _startViewTimer();
-    _ttsService.initialize();
+    _startReadingSession();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
-    _viewTimer?.cancel();
     _commentController.dispose();
     _replyController.dispose();
-    _ttsService.dispose();
+    _scrollController.dispose();
+    _endReadingSession();
     super.dispose();
   }
 
-  void _startViewTimer() {
-    _viewTimer = Timer(const Duration(seconds: 10), () {
-      if (!_hasIncrementedView) {
-        _incrementViewCount();
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 100) {
+      if (!_isScrolledToBottom) {
+        setState(() => _isScrolledToBottom = true);
       }
-    });
+    }
   }
 
-  Future<void> _incrementViewCount() async {
-    if (_hasIncrementedView) return;
+  Future<void> _startReadingSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    try {
-      final remoteSource = NewsRemoteSourceImpl(
-        firestore: FirebaseFirestore.instance,
-      );
-      final repository = NewsRepositoryImpl(remoteSource: remoteSource);
-      final incrementViewUseCase = IncrementViewUseCase(repository: repository);
+    _sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}_${widget.news.id}';
+    _startedAt = DateTime.now();
 
-      await incrementViewUseCase(widget.news.id);
-      
-      setState(() {
-        _hasIncrementedView = true;
-      });
+    final session = ReadingSessionModel(
+      userId: user.uid,
+      newsId: widget.news.id,
+      category: widget.news.category,
+      title: widget.news.title,
+      startedAt: _startedAt!,
+      durationSeconds: 0,
+      isBookmarked: _isBookmarked,
+      isCompleted: false,
+    );
 
-      debugPrint('View count incremented for news: ${widget.news.id}');
-    } catch (e) {
-      debugPrint('Error incrementing view count: $e');
-    }
+    // Save to Firestore với id là sessionId
+    final sessionData = session.toJson();
+    sessionData['id'] = _sessionId; // Add id to JSON
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('readingSessions')
+        .doc(_sessionId)
+        .set(sessionData);
+
+    print('📖 Started reading session: ${widget.news.title.substring(0, 30)}...');
+  }
+
+  Future<void> _endReadingSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || _sessionId == null || _startedAt == null) return;
+
+    final duration = DateTime.now().difference(_startedAt!).inSeconds;
+
+    // Update session
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('readingSessions')
+        .doc(_sessionId)
+        .update({
+      'durationSeconds': duration,
+      'isBookmarked': _isBookmarked,
+      'isCompleted': _isScrolledToBottom,
+    });
+
+    print('📖 Ended reading session: ${duration}s, bookmarked: $_isBookmarked, completed: $_isScrolledToBottom');
   }
 
   Future<void> _initBookmark() async {
@@ -173,12 +197,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .orderBy('createdAt', descending: true)
           .get();
 
-      // Load comments with updated usernames from users collection
-      final comments = await Future.wait(
-        querySnapshot.docs.map((doc) => 
-          CommentModel.fromFirestoreWithUserData(doc)
-        ),
-      );
+      final comments = querySnapshot.docs
+          .map((doc) => CommentModel.fromFirestore(doc))
+          .toList();
 
       if (mounted) {
         setState(() {
@@ -350,12 +371,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .orderBy('createdAt', descending: false)
           .get();
 
-      // Load replies with updated usernames from users collection
-      final replies = await Future.wait(
-        repliesSnapshot.docs.map((doc) => 
-          ReplyModel.fromFirestoreWithUserData(doc)
-        ),
-      );
+      final replies = repliesSnapshot.docs
+          .map((doc) => ReplyModel.fromFirestore(doc))
+          .toList();
 
       if (mounted) {
         setState(() {
@@ -660,105 +678,6 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     );
   }
 
-  Future<void> _toggleTts() async {
-    try {
-      if (_isTtsPlaying) {
-        // Nếu đang phát thì dừng
-        await _ttsService.stop();
-        setState(() {
-          _isTtsPlaying = false;
-        });
-      } else {
-        // Nếu đang dừng thì phát
-        // Kết hợp title và content
-        final textToRead = '${widget.news.title}. ${widget.news.content}';
-        await _ttsService.speak(textToRead);
-        setState(() {
-          _isTtsPlaying = true;
-        });
-
-        // Kiểm tra định kỳ xem TTS đã dừng chưa
-        Timer.periodic(const Duration(milliseconds: 500), (timer) {
-          if (!_ttsService.isSpeaking && mounted) {
-            setState(() {
-              _isTtsPlaying = false;
-            });
-            timer.cancel();
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('Error toggling TTS: \$e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi phát giọng nói: \${e.toString()}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _showShareOptions() async {
-    // Show loading indicator
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              ),
-              SizedBox(width: 16),
-              Text('Đang tạo tóm tắt AI để chia sẻ...'),
-            ],
-          ),
-          duration: Duration(seconds: 10), // Long duration, will hide manually
-        ),
-      );
-    }
-
-    try {
-      // 1. Generate AI Summary
-      final summary = await _aiSummaryService.summarizeNews(
-        widget.news.title,
-        widget.news.content,
-      );
-
-      // Hide loading SnackBar
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      }
-
-      // 2. Construct Share Text
-      final shareText = '''
-${widget.news.title}
-
-TÓM TẮT BỞI AI:
-$summary
-
-Đọc chi tiết tại News AI App
-''';
-
-      // 3. Share using native share sheet
-      await Share.share(
-        shareText,
-        subject: widget.news.title,
-      );
-    } catch (e) {
-      debugPrint('Error sharing: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi chia sẻ: $e')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -766,6 +685,7 @@ $summary
       body: Stack(
         children: [
           SingleChildScrollView(
+            controller: _scrollController,
             child: Column(
               children: [
                 // Hero Image Section
@@ -775,9 +695,7 @@ $summary
                   isLoading: _isLoading,
                   onBack: () => Navigator.pop(context),
                   onToggleBookmark: _toggleBookmark,
-                  onMore: _showShareOptions,
-                  onToggleTts: _toggleTts,
-                  isTtsPlaying: _isTtsPlaying,
+                  onMore: () {},
                 ),
 
                 // Content Section

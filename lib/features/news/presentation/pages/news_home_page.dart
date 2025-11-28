@@ -2,8 +2,17 @@ import 'package:app_news_ai/core/config/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:ionicons/ionicons.dart';
 import '../../../../widgets/app_bottom_nav_bar.dart';
+import '../../../notification/presentation/widgets/notification_dropdown.dart';
+import '../../../notification/presentation/cubit/notification_cubit.dart';
+import '../../../notification/domain/entities/user_preference.dart';
+import '../../../notification/data/services/auto_notification_service.dart';
+import '../../../notification/data/services/gemini_recommendation_service.dart';
+import '../../../notification/data/datasources/notification_datasource.dart';
 import '../../data/datasources/remote/news_remote_source.dart';
 import '../../data/repositories/news_repo_impl.dart';
 import '../../domain/usecases/get_news_usecase.dart';
@@ -54,6 +63,94 @@ class _NewsHomeViewState extends State<NewsHomeView> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+    _autoCheckNewNotifications();
+  }
+
+  void _loadNotifications() async {
+    final user = await FirebaseAuth.instance.authStateChanges().first;
+    if (user != null && mounted) {
+      context.read<NotificationCubit>().loadNotifications(user.uid);
+    }
+  }
+
+  void _autoCheckNewNotifications() async {
+    final user = await FirebaseAuth.instance.authStateChanges().first;
+    if (user == null || !mounted) return;
+
+    // Create auto notification service
+    final autoService = AutoNotificationService(
+      firestore: FirebaseFirestore.instance,
+      notificationDataSource: NotificationDataSource(
+        firestore: FirebaseFirestore.instance,
+        messaging: FirebaseMessaging.instance,
+        localNotifications: FlutterLocalNotificationsPlugin(),
+      ),
+      geminiService: GeminiRecommendationService(),
+    );
+
+    // Lấy user preferences
+    final prefDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('preferences')
+        .doc('userPreference')
+        .get();
+
+    // Kiểm tra số bài đã đọc
+    final readingSessionsSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('readingSessions')
+        .get();
+    
+    final hasReadingHistory = readingSessionsSnapshot.docs.length >= 5;
+
+    if (!prefDoc.exists && !hasReadingHistory) {
+      print('⚠️ User chưa có preferences và chưa đọc đủ bài - skip auto notification');
+      return;
+    }
+
+    UserPreference userPref;
+    if (!prefDoc.exists) {
+      // Có reading history nhưng chưa chạy "Phân tích ngay"
+      print('ℹ️ User có ${readingSessionsSnapshot.docs.length} bài đã đọc - dùng default tạm');
+      userPref = UserPreference(
+        userId: user.uid,
+        favoriteCategories: ['Thời sự', 'Công nghệ'], // Chỉ 2 categories phổ biến
+        keywords: [],
+        activeHours: {},
+        dailyNotificationLimit: 5,
+      );
+    } else {
+      // Parse existing preference
+      final prefData = prefDoc.data()!;
+      userPref = UserPreference(
+        userId: user.uid,
+        favoriteCategories: List<String>.from(prefData['favoriteCategories'] ?? ['Thời sự']),
+        keywords: List<String>.from(prefData['keywords'] ?? []),
+        activeHours: Map<int, int>.from(prefData['activeHours'] ?? {}),
+        dailyNotificationLimit: prefData['dailyNotificationLimit'] ?? 5,
+      );
+    }
+
+    // Check tin mới (chạy background)
+    autoService.checkAndCreateNotifications(user.uid, userPref);
+    
+    // Check breaking news
+    autoService.checkBreakingNews(user.uid);
+
+    // Reload notifications after auto check
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        context.read<NotificationCubit>().loadNotifications(user.uid);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
@@ -77,9 +174,49 @@ class _NewsHomeViewState extends State<NewsHomeView> {
                 color: AppColors.secondary,
                 shape: BoxShape.circle,
               ),
-              child: IconButton(
+              child: PopupMenuButton<String>(
                 icon: const Icon(Ionicons.menu_outline, color: Colors.black, size: 20),
-                onPressed: () {},
+                onSelected: (value) {
+                  if (value == 'demo') {
+                    Navigator.pushNamed(context, '/notification-demo');
+                  } else if (value == 'test') {
+                    Navigator.pushNamed(context, '/notification-test');
+                  } else if (value == 'settings') {
+                    Navigator.pushNamed(context, '/notification-settings');
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'demo',
+                    child: Row(
+                      children: [
+                        Icon(Icons.notifications_active, size: 20),
+                        SizedBox(width: 8),
+                        Text('Demo Thông báo'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'test',
+                    child: Row(
+                      children: [
+                        Icon(Icons.bug_report, size: 20),
+                        SizedBox(width: 8),
+                        Text('Test AI (Debug)'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings, size: 20),
+                        SizedBox(width: 8),
+                        Text('Cài đặt thông báo'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
                     ),
@@ -97,18 +234,9 @@ class _NewsHomeViewState extends State<NewsHomeView> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(5),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.secondary,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Ionicons.notifications_outline, color: Colors.black, size: 20),
-                  onPressed: () {},
-                ),
-              ),
+            const Padding(
+              padding: EdgeInsets.all(5),
+              child: NotificationDropdown(),
             ),
                     ],
             ),
