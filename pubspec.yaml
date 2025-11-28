@@ -50,6 +50,7 @@ dependencies:
 
   # Date formatting
   intl: ^0.19.0
+  timeago: ^3.7.0
 
   # Local Storage
   shared_preferences: ^2.2.2
@@ -63,6 +64,10 @@ dependencies:
 
   # Text to Speech
   flutter_tts: ^4.2.0
+
+  # Notifications
+  firebase_messaging: ^15.1.6
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:
