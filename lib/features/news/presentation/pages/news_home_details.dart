@@ -14,6 +14,7 @@ import '../widgets/ai_summary_button.dart';
 import '../widgets/ai_summary_bottom_sheet.dart';
 import '../../data/datasources/remote/ai_summary_service.dart';
 import '../../../notification/data/models/reading_session_model.dart';
+import '../../../../core/utils/tts_service.dart';
 
 class NewsDetailPage extends StatefulWidget {
   final News news;
@@ -54,16 +55,22 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isScrolledToBottom = false;
 
+  // TTS related
+  late TtsService _ttsService;
+  bool _isTtsPlaying = false;
+
   @override
   void initState() {
     super.initState();
     _bookmarkManager = FirebaseBookmarkManager.getInstance();
+    _ttsService = TtsService();
     _initBookmark();
     _loadRelatedNews();
     _loadComments();
     _loadLikedComments();
     _startReadingSession();
     _scrollController.addListener(_onScroll);
+    _initializeTts();
   }
 
   @override
@@ -71,8 +78,71 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     _commentController.dispose();
     _replyController.dispose();
     _scrollController.dispose();
+    _ttsService.dispose();
     _endReadingSession();
     super.dispose();
+  }
+
+  Future<void> _initializeTts() async {
+    try {
+      await _ttsService.initialize();
+      debugPrint('TTS service initialized successfully');
+    } catch (e) {
+      debugPrint('Error initializing TTS: $e');
+    }
+  }
+
+  Future<void> _toggleTts() async {
+    try {
+      if (_isTtsPlaying) {
+        // Nếu đang phát, dừng lại
+        await _ttsService.stop();
+        setState(() {
+          _isTtsPlaying = false;
+        });
+      } else {
+        // Nếu không phát, bắt đầu đọc
+        String contentToSpeak = "${widget.news.title}. ${widget.news.content}";
+        
+        // Loại bỏ các ký tự đặc biệt có thể gây lỗi
+        contentToSpeak = contentToSpeak
+            .replaceAll(RegExp(r'<[^>]*>'), '') // Loại bỏ HTML tags
+            .replaceAll(RegExp(r'&[^;]+;'), '') // Loại bỏ HTML entities
+            .replaceAll(RegExp(r'\s+'), ' ') // Loại bỏ khoảng trắng thừa
+            .trim();
+        
+        await _ttsService.speak(contentToSpeak);
+        setState(() {
+          _isTtsPlaying = true;
+        });
+
+        // Lắng nghe khi TTS kết thúc để cập nhật UI
+        _checkTtsStatus();
+      }
+    } catch (e) {
+      debugPrint('Error toggling TTS: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi phát âm thanh: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _checkTtsStatus() async {
+    // Kiểm tra định kỳ xem TTS còn đang chạy không
+    while (_isTtsPlaying && mounted) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!_ttsService.isSpeaking && _isTtsPlaying) {
+        setState(() {
+          _isTtsPlaying = false;
+        });
+        break;
+      }
+    }
   }
 
   void _onScroll() {
@@ -696,6 +766,8 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                   onBack: () => Navigator.pop(context),
                   onToggleBookmark: _toggleBookmark,
                   onMore: () {},
+                  onToggleTts: _toggleTts,
+                  isTtsPlaying: _isTtsPlaying,
                 ),
 
                 // Content Section
