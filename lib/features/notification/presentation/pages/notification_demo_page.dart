@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:js' as js;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../admin/domain/entities/news.dart';
@@ -23,6 +22,7 @@ class NotificationDemoPage extends StatefulWidget {
 class _NotificationDemoPageState extends State<NotificationDemoPage> {
   late NotificationDataSource _notificationDataSource;
   late GeminiRecommendationService _geminiService;
+  late FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin;
   bool _isLoading = false;
   String _status = 'Sẵn sàng gửi thông báo test';
   
@@ -33,11 +33,11 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
   }
 
   void _initializeServices() async {
-    final localNotifications = FlutterLocalNotificationsPlugin();
+    _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     _notificationDataSource = NotificationDataSource(
       firestore: FirebaseFirestore.instance,
       messaging: FirebaseMessaging.instance,
-      localNotifications: localNotifications,
+      localNotifications: _flutterLocalNotificationsPlugin,
     );
     _geminiService = GeminiRecommendationService();
     
@@ -55,45 +55,50 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
   Future<void> _requestWebNotificationPermission() async {
     try {
       if (kIsWeb) {
-        // Check if browser supports notifications
-        final permission = js.context.callMethod('eval', ['typeof Notification !== "undefined" ? Notification.permission : "denied"']);
+        // Web notification permission (placeholder for web-only code)
+        setState(() => _status = '⚠️ Web notification chỉ hoạt động trên browser');
+      } else {
+        // Mobile notification permission
+        final messaging = FirebaseMessaging.instance;
+        final settings = await messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
         
-        if (permission == 'default') {
-          // Request permission
-          js.context['Notification'].callMethod('requestPermission').then((result) {
-            setState(() => _status = result == 'granted' 
-              ? '✅ Đã cấp quyền thông báo web' 
-              : '⚠️ Bạn cần cấp quyền thông báo trong browser');
-          });
-        } else if (permission == 'granted') {
-          setState(() => _status = '✅ Browser đã có quyền thông báo');
+        if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+          setState(() => _status = '✅ Đã cấp quyền thông báo mobile');
         } else {
-          setState(() => _status = '⚠️ Vui lòng cấp quyền thông báo trong Settings browser');
+          setState(() => _status = '⚠️ Cần cấp quyền thông báo trong Settings');
         }
       }
     } catch (e) {
-      print('Error requesting web notification permission: $e');
+      print('Error requesting notification permission: $e');
+      setState(() => _status = 'Lỗi khi xin quyền thông báo: $e');
     }
   }
 
   Future<void> _showWebNotification(String title, String body) async {
     if (kIsWeb) {
-      try {
-        js.context.callMethod('eval', ['''
-          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification('$title', {
-              body: '$body',
-              icon: '/icons/Icon-192.png',
-              badge: '/icons/Icon-192.png',
-              vibrate: [200, 100, 200],
-              requireInteraction: false,
-              tag: 'news-notification',
-            });
-          }
-        ''']);
-      } catch (e) {
-        print('Error showing web notification: $e');
-      }
+      // Web notification placeholder - would need dart:js for actual implementation
+      print('Web notification: $title - $body');
+    } else {
+      // Use Flutter local notifications for mobile
+      const androidDetails = AndroidNotificationDetails(
+        'news_channel',
+        'News Notifications',
+        channelDescription: 'Notifications for news updates',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      const notificationDetails = NotificationDetails(android: androidDetails);
+      
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title,
+        body,
+        notificationDetails,
+      );
     }
   }
 

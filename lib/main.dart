@@ -57,17 +57,27 @@ import 'features/notification/presentation/cubit/notification_cubit.dart';
 import 'features/notification/presentation/pages/notifications_page.dart';
 import 'features/notification/presentation/pages/notification_settings_page.dart';
 import 'features/notification/presentation/pages/notification_demo_page.dart';
+import 'features/notification/presentation/pages/notification_test_page.dart';
+
+// Handle FCM background messages
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('📨 Background message: ${message.notification?.title}');
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Set FCM background message handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   final prefs = await SharedPreferences.getInstance();
 
   // Setup timeago Vietnamese locale
   setupTimeagoLocale();
-
+  
   runApp(MyApp(prefs: prefs));
 }
 
@@ -111,7 +121,7 @@ class MyApp extends StatelessWidget {
     final updateUserProfileUsecase = UpdateProfileUseCase(profileRepository);
     final uploadAvatarUsecase = UploadAvatarUseCase(profileRepository);
 
-    // Setup Notification dependencies
+    // Setup Notification dependencies  
     final notificationDataSource = NotificationDataSource(
       firestore: FirebaseFirestore.instance,
       messaging: FirebaseMessaging.instance,
@@ -191,6 +201,7 @@ class MyApp extends StatelessWidget {
           '/notifications': (context) => const NotificationsPage(),
           '/notification-settings': (context) => const NotificationSettingsPage(),
           '/notification-demo': (context) => const NotificationDemoPage(),
+          '/notification-test': (context) => const NotificationTestPage(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/email-verification') {

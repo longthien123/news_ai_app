@@ -137,12 +137,14 @@ class AutoNotificationService {
         // Save to Firestore
         await notificationDataSource.saveNotification(notification);
 
-        // Show local notification (không popup web, chỉ lưu)
-        // Nếu muốn popup thì uncomment dòng dưới
-        // await notificationDataSource.showLocalNotification(
-        //   title: notification.title,
-        //   body: notification.body,
-        // );
+        // Show real push notification immediately
+        await notificationDataSource.showLocalNotification(
+          title: notification.title,
+          body: notification.body,
+        );
+        
+        // Send FCM push notification if user has token
+        await _sendFCMNotification(userId, notification);
 
         notificationsCreated++;
         print('✅ Created notification for: ${news.title.substring(0, 30)}... (score: ${relevanceScore.toStringAsFixed(2)})');
@@ -153,7 +155,33 @@ class AutoNotificationService {
 
       print('Auto notification completed: $notificationsCreated notifications created');
     } catch (e) {
-      print('Error in auto notification service: $e');
+      print('Error in auto notification: $e');
+    }
+  }
+  
+  /// Send FCM push notification to user's device
+  Future<void> _sendFCMNotification(String userId, SmartNotificationModel notification) async {
+    try {
+      // Get user's FCM token
+      final userDoc = await firestore.collection('users').doc(userId).get();
+      final fcmToken = userDoc.data()?['fcmToken'] as String?;
+      
+      if (fcmToken == null) {
+        print('⚠️ No FCM token for user: $userId');
+        return;
+      }
+      
+      // This would typically be done from your backend/Firebase Functions
+      // For demo, we'll just log it
+      print('📨 Would send FCM to token: ${fcmToken.substring(0, 20)}...');
+      print('📨 Title: ${notification.title}');
+      print('📨 Body: ${notification.body}');
+      
+      // Note: In production, use Firebase Admin SDK from backend to send FCM
+      // or use Firebase Cloud Functions triggers
+      
+    } catch (e) {
+      print('Error sending FCM: $e');
     }
   }
 
@@ -203,11 +231,14 @@ class AutoNotificationService {
 
         await notificationDataSource.saveNotification(notification);
         
-        // Show popup for breaking news
+        // Show immediate notification for breaking news
         await notificationDataSource.showLocalNotification(
           title: notification.title,
           body: notification.body,
         );
+        
+        // Send FCM push notification
+        await _sendFCMNotification(userId, notification);
 
         print('⚡ Breaking news notification sent: ${data['title']}');
       }

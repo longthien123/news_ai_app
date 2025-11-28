@@ -21,7 +21,30 @@ class NotificationDataSource {
       android: androidSettings,
       iOS: iosSettings,
     );
-    await localNotifications.initialize(settings);
+    
+    await localNotifications.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        print('📱 Notification tapped: ${response.payload}');
+        // Handle notification tap - could navigate to news detail
+      },
+    );
+    
+    // Create notification channel for Android
+    const androidChannel = AndroidNotificationChannel(
+      'smart_notifications',
+      'Smart Notifications', 
+      description: 'AI-powered personalized news notifications',
+      importance: Importance.high,
+      enableVibration: true,
+      playSound: true,
+    );
+    
+    await localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
+        
+    print('✅ Notification channel created: smart_notifications');
   }
 
   Future<String?> getFCMToken() async {
