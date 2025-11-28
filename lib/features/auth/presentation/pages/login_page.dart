@@ -16,6 +16,9 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  // ✅ Danh sách email admin
+  static const List<String> _adminEmails = ['longthienl80@gmail.com'];
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -27,15 +30,8 @@ class _LoginPageState extends State<LoginPage> {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      
-      // Kiểm tra tài khoản admin đặc biệt
-      if (email == 'adminnews@gmail.com' && password == 'admin123') {
-        // Vào thẳng trang admin mà không cần xác thực Firebase
-        Navigator.of(context).pushReplacementNamed('/admin');
-        return;
-      }
-      
-      // Đăng nhập bình thường qua Firebase
+
+      // Đăng nhập qua Firebase
       context.read<AuthCubit>().login(email, password);
     }
   }
@@ -47,12 +43,11 @@ class _LoginPageState extends State<LoginPage> {
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
-            // Đăng nhập thành công qua Firebase → vào trang home
-            Navigator.of(context).pushReplacementNamed('/home');
+            Navigator.of(context).pushReplacementNamed('/');
           } else if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -71,10 +66,7 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       const SizedBox(height: 60),
                       // Logo
-                      Image.asset(
-                        'assets/images/logo.png',
-                        height: 100,
-                      ),
+                      Image.asset('assets/images/logo.png', height: 100),
                       const SizedBox(height: 60),
                       // Email field
                       TextFormField(
@@ -96,11 +88,13 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide(color: Colors.grey[400]!), 
+                            borderSide: BorderSide(color: Colors.grey[400]!),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
-                            borderSide: const BorderSide(color: AppColors.primary),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                         validator: (value) {
@@ -142,7 +136,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                               color: Colors.grey[400],
                               size: 20,
                             ),
@@ -181,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 13,
-                              fontWeight: FontWeight.w500
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -218,10 +214,7 @@ class _LoginPageState extends State<LoginPage> {
                       // Or sign in with
                       Text(
                         'hoặc đăng nhập bằng',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                       const SizedBox(height: 35),
                       // Continue with Google button
@@ -280,7 +273,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context).pushReplacementNamed('/register');
+                              Navigator.of(
+                                context,
+                              ).pushReplacementNamed('/register');
                             },
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
@@ -292,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(
                                 color: Color(0xFF0052CC),
                                 fontSize: 11,
-                                fontWeight: FontWeight.w600
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
