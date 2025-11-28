@@ -67,13 +67,93 @@ class _NewsHomeViewState extends State<NewsHomeView> {
     super.initState();
     _loadNotifications();
     _autoCheckNewNotifications();
+    _setupForegroundMessaging();
+  }
+  
+  void _setupForegroundMessaging() {
+    // Handle foreground messages (when app is open)
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('📨 Foreground message received: ${message.notification?.title}');
+      
+      if (message.notification != null) {
+        // Show local notification immediately
+        final notificationDataSource = NotificationDataSource(
+          firestore: FirebaseFirestore.instance,
+          messaging: FirebaseMessaging.instance,
+          localNotifications: FlutterLocalNotificationsPlugin(),
+        );
+        
+        notificationDataSource.showLocalNotification(
+          title: message.notification!.title ?? 'Thông báo mới',
+          body: message.notification!.body ?? '',
+        );
+        
+        // Auto refresh badge count
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null && mounted) {
+          context.read<NotificationCubit>().loadNotifications(user.uid);
+        }
+      }
+    });
+    
+    // Handle notification taps (when app is in background)
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('📱 Notification tapped: ${message.notification?.title}');
+      // Navigate to notifications page
+      Navigator.pushNamed(context, '/notifications');
+    });
   }
 
   void _loadNotifications() async {
     final user = await FirebaseAuth.instance.authStateChanges().first;
     if (user != null && mounted) {
+      // Load initial notifications
       context.read<NotificationCubit>().loadNotifications(user.uid);
+      
+      // Setup FCM token for push notifications
+      await _setupFCMToken(user.uid);
+      
+      // Setup real-time notification listener
+      _setupNotificationStream(user.uid);
     }
+  }
+  
+  Future<void> _setupFCMToken(String userId) async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({
+            'fcmToken': fcmToken,
+            'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+          });
+        print('💾 FCM Token saved: ${fcmToken.substring(0, 20)}...');
+      }
+    } catch (e) {
+      print('❌ Error saving FCM token: $e');
+    }
+  }
+  
+  void _setupNotificationStream(String userId) {
+    // Listen for real-time notification changes
+    FirebaseFirestore.instance
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+      .orderBy('scheduledAt', descending: true)
+      .limit(50)
+      .snapshots()
+      .listen((snapshot) {
+        if (mounted) {
+          // Auto refresh notification count without F5
+          context.read<NotificationCubit>().loadNotifications(userId);
+          print('🔄 Auto refreshed notifications: ${snapshot.docs.length} total');
+        }
+      }, onError: (error) {
+        print('❌ Notification stream error: $error');
+      });
   }
 
   void _autoCheckNewNotifications() async {
