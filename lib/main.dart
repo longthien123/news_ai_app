@@ -29,6 +29,7 @@ import 'features/admin/domain/usecases/news/add_news_usecase.dart';
 import 'features/admin/domain/usecases/news/get_news_detail_usecase.dart';
 import 'features/admin/domain/usecases/news/get_news_usecase.dart';
 import 'features/admin/presentation/cubit/news_cubit.dart';
+import 'features/admin/presentation/pages/add_news_page.dart';
 
 
 import 'features/profile/data/datasources/profile_remote_datasource.dart';
@@ -129,6 +130,7 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterPage(),
           '/forgot-password': (context) => const ForgotPasswordPage(),
           '/home': (context) => const NewsHomePage(),
+          '/admin': (context) => const AddNewsPage(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/email-verification') {
