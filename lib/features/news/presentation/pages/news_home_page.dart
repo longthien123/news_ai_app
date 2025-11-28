@@ -9,7 +9,9 @@ import '../../data/repositories/news_repo_impl.dart';
 import '../../domain/usecases/get_news_usecase.dart';
 import '../cubit/news_cubit.dart';
 import '../widgets/news_home_widgets.dart';
+
 import 'news_saved.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 
 class NewsHomePage extends StatelessWidget {
   const NewsHomePage({super.key});
@@ -345,6 +347,14 @@ class _NewsHomeViewState extends State<NewsHomeView> {
               context,
               MaterialPageRoute(
                 builder: (context) => const SavedNewsPage(),
+              ),
+            );
+          } else if (index == 3) {
+            // Navigate to Profile page
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ProfilePage(),
               ),
             );
           }
