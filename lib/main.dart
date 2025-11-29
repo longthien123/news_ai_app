@@ -1,10 +1,10 @@
 import 'package:app_news_ai/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'core/utils/timeago_setup.dart';
 
 // Import auth files
 import 'features/auth/data/datasources/local/user_local_source.dart';
@@ -30,10 +30,8 @@ import 'features/admin/domain/usecases/news/add_news_usecase.dart';
 import 'features/admin/domain/usecases/news/get_news_detail_usecase.dart';
 import 'features/admin/domain/usecases/news/get_news_usecase.dart';
 import 'features/admin/presentation/cubit/news_cubit.dart';
-import 'features/admin/presentation/pages/add_news_page.dart';
-import 'features/admin/presentation/pages/admin_dashboard_page.dart';
 
-
+//Import profile files
 import 'features/profile/data/datasources/profile_remote_datasource.dart';
 import 'features/profile/data/repositories/profile_repository_impl.dart';
 import 'features/profile/domain/usecases/get_profile_usecase.dart';
@@ -54,30 +52,14 @@ import 'features/notification/domain/usecases/get_smart_notif_usecase.dart';
 import 'features/notification/domain/usecases/analyze_user_behavior_usecase.dart';
 import 'features/notification/domain/usecases/create_smart_notification_usecase.dart';
 import 'features/notification/presentation/cubit/notification_cubit.dart';
-import 'features/notification/presentation/pages/notifications_page.dart';
-import 'features/notification/presentation/pages/notification_settings_page.dart';
-import 'features/notification/presentation/pages/notification_demo_page.dart';
-import 'features/notification/presentation/pages/notification_test_page.dart';
-
-// Handle FCM background messages
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('📨 Background message: ${message.notification?.title}');
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
-  // Set FCM background message handler
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   final prefs = await SharedPreferences.getInstance();
 
-  // Setup timeago Vietnamese locale
-  setupTimeagoLocale();
-  
   runApp(MyApp(prefs: prefs));
 }
 
@@ -121,30 +103,34 @@ class MyApp extends StatelessWidget {
     final updateUserProfileUsecase = UpdateProfileUseCase(profileRepository);
     final uploadAvatarUsecase = UploadAvatarUseCase(profileRepository);
 
-    // Setup Notification dependencies  
+    // Setup Notification dependencies
+    final localNotifications = FlutterLocalNotificationsPlugin();
     final notificationDataSource = NotificationDataSource(
       firestore: FirebaseFirestore.instance,
       messaging: FirebaseMessaging.instance,
-      localNotifications: FlutterLocalNotificationsPlugin(),
+      localNotifications: localNotifications,
     );
-    final behaviorDataSource = UserBehaviorDataSource(firestore: FirebaseFirestore.instance);
+    // Initialize notifications (fire and forget for now, or await if converted to StatefulWidget)
+    notificationDataSource.initializeLocalNotifications();
+
+    final userBehaviorDataSource = UserBehaviorDataSource(firestore: FirebaseFirestore.instance);
     final geminiService = GeminiRecommendationService();
-    
+
     final notificationRepository = NotificationRepositoryImpl(dataSource: notificationDataSource);
-    final behaviorRepository = UserBehaviorRepositoryImpl(
-      dataSource: behaviorDataSource,
+    final userBehaviorRepository = UserBehaviorRepositoryImpl(
+      dataSource: userBehaviorDataSource,
       aiService: geminiService,
     );
-    
+
     final getNotificationsUseCase = GetNotificationsUseCase(notificationRepository);
     final getSmartNotificationsUseCase = GetSmartNotificationsUseCase(
       notificationRepository: notificationRepository,
-      behaviorRepository: behaviorRepository,
+      behaviorRepository: userBehaviorRepository,
     );
-    final analyzeUserBehaviorUseCase = AnalyzeUserBehaviorUseCase(behaviorRepository);
+    final analyzeUserBehaviorUseCase = AnalyzeUserBehaviorUseCase(userBehaviorRepository);
     final createSmartNotificationUseCase = CreateSmartNotificationUseCase(
       notificationRepository: notificationRepository,
-      behaviorRepository: behaviorRepository,
+      behaviorRepository: userBehaviorRepository,
     );
 
     return MultiBlocProvider(
@@ -179,7 +165,15 @@ class MyApp extends StatelessWidget {
             getSmartNotificationsUseCase: getSmartNotificationsUseCase,
             analyzeUserBehaviorUseCase: analyzeUserBehaviorUseCase,
             createSmartNotificationUseCase: createSmartNotificationUseCase,
-          ),
+          )..loadNotifications(
+              // Load notifications if user is logged in
+              // This is a bit tricky in stateless widget, but we can try getting current user
+              // or let the UI trigger it. For now, let's just create it.
+              // Better: check auth state inside cubit or UI.
+              // We'll just instantiate it here.
+              // Actually, we can try to load if user exists
+              FirebaseAuth.instance.currentUser?.uid ?? '',
+            ),
         ),
       ],
       child: MaterialApp(
@@ -196,12 +190,6 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterPage(),
           '/forgot-password': (context) => const ForgotPasswordPage(),
           '/home': (context) => const NewsHomePage(),
-          '/admin': (context) => const AdminDashboardPage(),
-          '/admin/add-news': (context) => const AddNewsPage(),
-          '/notifications': (context) => const NotificationsPage(),
-          '/notification-settings': (context) => const NotificationSettingsPage(),
-          '/notification-demo': (context) => const NotificationDemoPage(),
-          '/notification-test': (context) => const NotificationTestPage(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/email-verification') {
