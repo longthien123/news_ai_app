@@ -7,7 +7,6 @@ abstract class NewsState extends Equatable {
 }
 
 class NewsInitial extends NewsState {}
-
 class NewsLoading extends NewsState {}
 
 class NewsListLoaded extends NewsState {
@@ -38,7 +37,16 @@ class NewsError extends NewsState {
   List<Object?> get props => [message];
 }
 
-// External news states
+// RSS States
+class RssSourcesLoading extends NewsState {}
+
+class RssSourcesLoaded extends NewsState {
+  final List<RssSourceModel> sources;
+  const RssSourcesLoaded(this.sources);
+  @override
+  List<Object?> get props => [sources];
+}
+
 class ExternalNewsLoading extends NewsState {}
 
 class ExternalNewsLoaded extends NewsState {

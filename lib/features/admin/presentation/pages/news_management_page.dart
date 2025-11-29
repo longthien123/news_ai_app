@@ -23,6 +23,7 @@ class _NewsManagementPageState extends State<NewsManagementPage> {
     'Sức khỏe',
     'Giáo dục',
     'Tổng hợp',
+    'Khác',
   ];
 
   @override

@@ -32,7 +32,7 @@ import 'features/admin/domain/usecases/news/get_news_usecase.dart';
 import 'features/admin/presentation/cubit/news_cubit.dart';
 import 'features/admin/presentation/pages/add_news_page.dart';
 import 'features/admin/presentation/pages/admin_dashboard_page.dart';
-
+import 'features/admin/data/datasources/remote/rss_news_service.dart';
 
 import 'features/profile/data/datasources/profile_remote_datasource.dart';
 import 'features/profile/data/repositories/profile_repository_impl.dart';
@@ -69,7 +69,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
   // Set FCM background message handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -77,7 +77,7 @@ void main() async {
 
   // Setup timeago Vietnamese locale
   setupTimeagoLocale();
-  
+
   runApp(MyApp(prefs: prefs));
 }
 
@@ -113,35 +113,49 @@ class MyApp extends StatelessWidget {
     final addNewsUsecase = AddNewsUsecase(newsRepository);
     final getNewsDetailUsecase = GetNewsDetailUsecase(newsRepository);
     final getNewsUsecase = GetNewsUsecase(newsRepository);
+    // ✅ THÊM: Setup RSS service
+    final rssNewsService = RssNewsService();
 
     // Setup Profile dependencies
-    final profileRemoteSource = ProfileRemoteDataSourceImpl(firestore: FirebaseFirestore.instance);
-    final profileRepository = ProfileRepositoryImpl(remoteDataSource: profileRemoteSource);
+    final profileRemoteSource = ProfileRemoteDataSourceImpl(
+      firestore: FirebaseFirestore.instance,
+    );
+    final profileRepository = ProfileRepositoryImpl(
+      remoteDataSource: profileRemoteSource,
+    );
     final getProfileUsecase = GetProfileUseCase(profileRepository);
     final updateUserProfileUsecase = UpdateProfileUseCase(profileRepository);
     final uploadAvatarUsecase = UploadAvatarUseCase(profileRepository);
 
-    // Setup Notification dependencies  
+    // Setup Notification dependencies
     final notificationDataSource = NotificationDataSource(
       firestore: FirebaseFirestore.instance,
       messaging: FirebaseMessaging.instance,
       localNotifications: FlutterLocalNotificationsPlugin(),
     );
-    final behaviorDataSource = UserBehaviorDataSource(firestore: FirebaseFirestore.instance);
+    final behaviorDataSource = UserBehaviorDataSource(
+      firestore: FirebaseFirestore.instance,
+    );
     final geminiService = GeminiRecommendationService();
-    
-    final notificationRepository = NotificationRepositoryImpl(dataSource: notificationDataSource);
+
+    final notificationRepository = NotificationRepositoryImpl(
+      dataSource: notificationDataSource,
+    );
     final behaviorRepository = UserBehaviorRepositoryImpl(
       dataSource: behaviorDataSource,
       aiService: geminiService,
     );
-    
-    final getNotificationsUseCase = GetNotificationsUseCase(notificationRepository);
+
+    final getNotificationsUseCase = GetNotificationsUseCase(
+      notificationRepository,
+    );
     final getSmartNotificationsUseCase = GetSmartNotificationsUseCase(
       notificationRepository: notificationRepository,
       behaviorRepository: behaviorRepository,
     );
-    final analyzeUserBehaviorUseCase = AnalyzeUserBehaviorUseCase(behaviorRepository);
+    final analyzeUserBehaviorUseCase = AnalyzeUserBehaviorUseCase(
+      behaviorRepository,
+    );
     final createSmartNotificationUseCase = CreateSmartNotificationUseCase(
       notificationRepository: notificationRepository,
       behaviorRepository: behaviorRepository,
@@ -164,6 +178,7 @@ class MyApp extends StatelessWidget {
             addNewsUsecase: addNewsUsecase,
             getNewsDetailUsecase: getNewsDetailUsecase,
             getNewsUsecase: getNewsUsecase,
+            rssNewsService: rssNewsService, // ✅ THÊM parameter
           ),
         ),
         BlocProvider(
@@ -199,7 +214,8 @@ class MyApp extends StatelessWidget {
           '/admin': (context) => const AdminDashboardPage(),
           '/admin/add-news': (context) => const AddNewsPage(),
           '/notifications': (context) => const NotificationsPage(),
-          '/notification-settings': (context) => const NotificationSettingsPage(),
+          '/notification-settings': (context) =>
+              const NotificationSettingsPage(),
           '/notification-demo': (context) => const NotificationDemoPage(),
           '/notification-test': (context) => const NotificationTestPage(),
         },
@@ -220,6 +236,9 @@ class MyApp extends StatelessWidget {
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({Key? key}) : super(key: key);
 
+  // ✅ Danh sách email admin
+  static const List<String> adminEmails = ['longthienl80@gmail.com'];
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthCubit, AuthState>(
@@ -229,8 +248,18 @@ class AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         } else if (state is Authenticated) {
-          return const NewsHomePage();
+          // ✅ Kiểm tra email để route đúng
+          final email = state.user.email ?? '';
+
+          if (adminEmails.contains(email)) {
+            // Admin → vào trang admin
+            return const AdminDashboardPage();
+          } else {
+            // User → vào trang home
+            return const NewsHomePage();
+          }
         } else {
+          // Chưa đăng nhập → login
           return const LoginPage();
         }
       },

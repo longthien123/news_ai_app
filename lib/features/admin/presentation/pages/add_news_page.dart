@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/news_cubit.dart';
 import '../../data/models/external_news_model.dart';
+import '../widgets/rss_picker_dialog.dart';
 
 class AddNewsPage extends StatefulWidget {
   const AddNewsPage({Key? key}) : super(key: key);
@@ -34,13 +35,7 @@ class _AddNewsPageState extends State<AddNewsPage> {
   @override
   void initState() {
     super.initState();
-    // Ensure cubit state is clean
-    final cubit = context.read<NewsCubit>();
-    if (cubit is NewsCubit) {
-      try {
-        cubit.resetToInitial();
-      } catch (_) {}
-    }
+    context.read<NewsCubit>().resetToInitial();
   }
 
   @override
@@ -53,83 +48,40 @@ class _AddNewsPageState extends State<AddNewsPage> {
   }
 
   void _fillFromExternal(ExternalNewsModel item) {
-    final data = item.toNewsData(overrideSource: 'newsorg');
+    // ✅ Dùng toNewsData để chuyển đổi, nó sẽ lấy item.description (đã có nội dung từ webhook)
+    final data = item.toNewsData(overrideSource: item.source);
+
+    // Kiểm tra xem danh mục trả về có trong list không, nếu không thì dùng "Tổng hợp"
+    String mappedCategory = data['category'] as String;
+    if (!_categories.contains(mappedCategory)) {
+      mappedCategory = 'Tổng hợp';
+    }
+
     setState(() {
       _titleController.text = data['title'] as String;
-      _contentController.text = data['content'] as String;
-      _selectedCategory = data['category'] as String;
+      _contentController.text =
+          data['content'] as String; // ✅ Điền nội dung hoặc lỗi từ webhook
+      _selectedCategory = mappedCategory;
       _imageUrls.clear();
       final imgs = data['imageUrls'] as List<dynamic>;
       _imageUrls.addAll(imgs.map((e) => e.toString()));
       _sourceController.text = data['source'] as String;
     });
-    Navigator.of(context).pop();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Đã tải và điền thông tin từ ${item.source}'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
-  void _showQuickAddDialog() {
-    context.read<NewsCubit>().fetchExternalTop();
+  void _showRssDialog() {
+    context.read<NewsCubit>().loadRssSources();
+
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        child: SizedBox(
-          width: double.maxFinite,
-          height: MediaQuery.of(context).size.height * 0.75,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: TextField(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Tìm kiếm tin (nhấn Enter)...',
-                  ),
-                  onSubmitted: (q) {
-                    if (q.trim().isNotEmpty) {
-                      context.read<NewsCubit>().searchExternal(q.trim());
-                    }
-                  },
-                ),
-              ),
-              Expanded(
-                child: BlocBuilder<NewsCubit, NewsState>(
-                  builder: (context, state) {
-                    if (state is ExternalNewsLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (state is ExternalNewsLoaded) {
-                      return ListView.builder(
-                        itemCount: state.newsList.length,
-                        itemBuilder: (c, i) {
-                          final it = state.newsList[i];
-                          return ListTile(
-                            leading: it.urlToImage.isNotEmpty
-                                ? Image.network(
-                                    it.urlToImage,
-                                    width: 80,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        const Icon(Icons.broken_image),
-                                  )
-                                : const SizedBox(
-                                    width: 80,
-                                    child: Icon(Icons.article),
-                                  ),
-                            title: Text(it.title),
-                            subtitle: Text(it.source),
-                            onTap: () => _fillFromExternal(it),
-                          );
-                        },
-                      );
-                    } else if (state is NewsError) {
-                      return Center(child: Text(state.message));
-                    }
-                    return const SizedBox();
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (dialogContext) => RssPickerDialog(onSelect: _fillFromExternal),
     );
   }
 
@@ -154,13 +106,14 @@ class _AddNewsPageState extends State<AddNewsPage> {
       );
       return;
     }
+
     context.read<NewsCubit>().addNews(
       title: _titleController.text.trim(),
       content: _contentController.text.trim(),
       imageUrls: _imageUrls,
       category: _selectedCategory,
       source: _sourceController.text.isEmpty
-          ? 'newsorg'
+          ? 'Không rõ'
           : _sourceController.text.trim(),
     );
   }
@@ -172,10 +125,10 @@ class _AddNewsPageState extends State<AddNewsPage> {
         title: const Text('Thêm tin tức'),
         actions: [
           TextButton.icon(
-            onPressed: _showQuickAddDialog,
+            onPressed: _showRssDialog,
             icon: const Icon(Icons.flash_on, color: Colors.black),
             label: const Text(
-              'Thêm tin nhanh',
+              'Thêm nhanh',
               style: TextStyle(color: Colors.black),
             ),
           ),
@@ -186,16 +139,23 @@ class _AddNewsPageState extends State<AddNewsPage> {
         listener: (c, state) {
           if (state is NewsAdded) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Thêm tin thành công')),
+              const SnackBar(content: Text('✅ Thêm tin thành công')),
             );
-            Navigator.of(context).pop();
-          } else if (state is NewsError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
+          } else if (state is NewsError && state is! ExternalNewsLoading) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
         },
         builder: (c, state) {
+          if (state is NewsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -203,7 +163,6 @@ class _AddNewsPageState extends State<AddNewsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Title
                   TextFormField(
                     controller: _titleController,
                     decoration: const InputDecoration(
@@ -216,8 +175,6 @@ class _AddNewsPageState extends State<AddNewsPage> {
                         (v == null || v.isEmpty) ? 'Nhập tiêu đề' : null,
                   ),
                   const SizedBox(height: 12),
-
-                  // Content
                   TextFormField(
                     controller: _contentController,
                     decoration: const InputDecoration(
@@ -230,8 +187,6 @@ class _AddNewsPageState extends State<AddNewsPage> {
                         (v == null || v.isEmpty) ? 'Nhập nội dung' : null,
                   ),
                   const SizedBox(height: 12),
-
-                  // Category dropdown
                   DropdownButtonFormField<String>(
                     value: _selectedCategory,
                     decoration: const InputDecoration(
@@ -251,19 +206,17 @@ class _AddNewsPageState extends State<AddNewsPage> {
                     },
                   ),
                   const SizedBox(height: 12),
-
-                  // Source
                   TextFormField(
                     controller: _sourceController,
                     decoration: const InputDecoration(
-                      labelText: 'Nguồn (mặc định newsorg nếu để trống)',
+                      labelText: 'Nguồn tin *',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.source),
                     ),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Nhập nguồn tin' : null,
                   ),
                   const SizedBox(height: 12),
-
-                  // Image URL input + add button
                   Row(
                     children: [
                       Expanded(
@@ -286,8 +239,6 @@ class _AddNewsPageState extends State<AddNewsPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Image previews (list of cards)
                   if (_imageUrls.isNotEmpty)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,10 +291,7 @@ class _AddNewsPageState extends State<AddNewsPage> {
                         ),
                       ],
                     ),
-
                   const SizedBox(height: 20),
-
-                  // Submit button
                   ElevatedButton.icon(
                     onPressed: _submit,
                     icon: const Icon(Icons.save),
