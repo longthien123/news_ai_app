@@ -55,11 +55,17 @@ class _NewsHomeViewState extends State<NewsHomeView> {
   final List<String> _categories = [
     'Thời sự',
     'Thế giới',
-    'Thể thao',
-    'Sức khỏe',
+    'Kinh doanh',
     'Giải trí',
+    'Thể thao',
+    'Pháp luật',
     'Giáo dục',
+    'Sức khỏe',
     'Đời sống',
+    'Du lịch',
+    'Công nghệ',
+    'Số hóa',
+    'Xe',
   ];
 
   @override

@@ -1,6 +1,5 @@
 import 'package:app_news_ai/core/config/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/news.dart';
@@ -31,7 +30,11 @@ class NewsDetailHeroSection extends StatelessWidget {
   });
 
   String _formatDate(DateTime date) {
-    return DateFormat('MMM d, yyyy').format(date);
+    const months = [
+      'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+      'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    ];
+    return '${date.day} ${months[date.month - 1]}, ${date.year}';
   }
 
   @override
@@ -227,14 +230,83 @@ class NewsDetailContentSection extends StatelessWidget {
 
   const NewsDetailContentSection({super.key, required this.news});
 
-  List<Widget> _buildContentWithImages() {
-    List<Widget> widgets = [];
-
-    // Split content into paragraphs
-    List<String> paragraphs = news.content
+  List<String> _splitIntoParagraphs(String content) {
+    // Remove URLs in square brackets (e.g., [https://example.com])
+    content = content.replaceAll(RegExp(r'\[https?://[^\]]+\]'), '');
+    
+    // Remove any lines that only contain URLs
+    content = content.split('\n')
+        .where((line) => !line.trim().startsWith('http'))
+        .join('\n');
+    
+    // First, try to split by existing newlines
+    List<String> paragraphs = content
         .split('\n')
         .where((p) => p.trim().isNotEmpty)
         .toList();
+
+    // If content is one big block (no newlines), split by sentences
+    // Create paragraphs of roughly 3-4 sentences each
+    if (paragraphs.length <= 1 && content.length > 200) {
+      // Split by periods followed by space and capital letter or end of string
+      List<String> sentences = content
+          .split(RegExp(r'(?<=[.!?])\s+(?=[A-Z])'))
+          .where((s) => s.trim().isNotEmpty)
+          .toList();
+
+      paragraphs = [];
+      List<String> currentParagraph = [];
+      int sentenceCount = 0;
+
+      for (var sentence in sentences) {
+        currentParagraph.add(sentence);
+        sentenceCount++;
+
+        // Create a new paragraph after every 3-4 sentences
+        if (sentenceCount >= 3) {
+          paragraphs.add(currentParagraph.join(' ').trim());
+          currentParagraph = [];
+          sentenceCount = 0;
+        }
+      }
+
+      // Add remaining sentences
+      if (currentParagraph.isNotEmpty) {
+        paragraphs.add(currentParagraph.join(' ').trim());
+      }
+    }
+
+    return paragraphs;
+  }
+
+  List<Widget> _buildContentWithImages() {
+    List<Widget> widgets = [];
+
+    // Extract author name (text after last sentence punctuation)
+    String contentToDisplay = news.content;
+    String? authorName;
+
+    // Find ALL sentence endings and get the text after the LAST one
+    final matches = RegExp(r'[.!?]').allMatches(news.content.trim());
+    if (matches.isNotEmpty) {
+      final lastMatch = matches.last;
+      final textAfterLastPunctuation = news.content.substring(lastMatch.end).trim();
+      
+      // Check if there's text after the last punctuation
+      if (textAfterLastPunctuation.isNotEmpty) {
+        // Check if it looks like an author attribution
+        if (textAfterLastPunctuation.contains('(') ||
+            textAfterLastPunctuation.toLowerCase().contains('theo') ||
+            textAfterLastPunctuation.length < 100) {
+          authorName = textAfterLastPunctuation;
+          // Remove author from content (keep the last punctuation)
+          contentToDisplay = news.content.substring(0, lastMatch.end).trim();
+        }
+      }
+    }
+
+    // Split content into paragraphs intelligently
+    List<String> paragraphs = _splitIntoParagraphs(contentToDisplay);
 
     // Images to distribute (skip the first one as it's the hero image)
     List<String> imagesToDistribute = news.imageUrls.length > 1
@@ -242,13 +314,24 @@ class NewsDetailContentSection extends StatelessWidget {
         : [];
 
     if (imagesToDistribute.isEmpty) {
-      // No additional images, just show content
-      widgets.add(
-        Text(
-          news.content,
-          style: TextStyle(fontSize: 16, color: Colors.grey[800], height: 1.7),
-        ),
-      );
+      // No additional images, just show content with paragraphs
+      for (int i = 0; i < paragraphs.length; i++) {
+        widgets.add(
+          Text(
+            paragraphs[i],
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[800],
+              height: 1.7,
+            ),
+          ),
+        );
+
+        // Add spacing between paragraphs
+        if (i < paragraphs.length - 1) {
+          widgets.add(const SizedBox(height: 16));
+        }
+      }
     } else {
       // Calculate how many paragraphs between each image
       int totalParagraphs = paragraphs.length;
@@ -267,20 +350,24 @@ class NewsDetailContentSection extends StatelessWidget {
             0,
             totalParagraphs,
           );
-          String textContent = paragraphs
-              .sublist(currentParagraphIndex, endIndex)
-              .join('\n\n');
 
-          widgets.add(
-            Text(
-              textContent,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[800],
-                height: 1.7,
+          for (int i = currentParagraphIndex; i < endIndex; i++) {
+            widgets.add(
+              Text(
+                paragraphs[i],
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[800],
+                  height: 1.7,
+                ),
               ),
-            ),
-          );
+            );
+
+            // Add spacing between paragraphs
+            if (i < endIndex - 1) {
+              widgets.add(const SizedBox(height: 16));
+            }
+          }
 
           currentParagraphIndex = endIndex;
 
@@ -309,6 +396,25 @@ class NewsDetailContentSection extends StatelessWidget {
           }
         }
       }
+    }
+
+    // Add author name at the end, aligned to the right (if found in content)
+    if (authorName != null && authorName.isNotEmpty) {
+      widgets.add(const SizedBox(height: 24));
+      widgets.add(
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            authorName,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
     }
 
     return widgets;
@@ -493,7 +599,7 @@ class CommentCard extends StatelessWidget {
   });
 
   String _formatDate(DateTime date) {
-    return DateFormat('MMM d, yyyy').format(date);
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   @override
@@ -752,7 +858,7 @@ class ReplyCard extends StatelessWidget {
   const ReplyCard({super.key, required this.reply, this.onDelete});
 
   String _formatDate(DateTime date) {
-    return DateFormat('MMM d, yyyy').format(date);
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   @override
@@ -860,7 +966,7 @@ class RelatedNewsCard extends StatelessWidget {
   const RelatedNewsCard({super.key, required this.news, required this.onTap});
 
   String _formatDate(DateTime date) {
-    return DateFormat('MMM d, yyyy').format(date);
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   @override
