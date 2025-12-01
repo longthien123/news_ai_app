@@ -40,7 +40,7 @@ class _ProfilePageState extends State<ProfilePage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Account',
+          'Tài khoản',
           style: TextStyle(
             color: Colors.black,
             fontSize: 24,
@@ -137,7 +137,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           elevation: 0,
                         ),
                         child: const Text(
-                          'View full profile',
+                          'Xem chi tiết hồ sơ',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -149,7 +149,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     // Preferences Section
                     const Text(
-                      'Preferences',
+                      'Tùy chọn',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -158,12 +158,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 16),
                     ProfileMenuItem(
-                      title: 'Language',
+                      title: 'Ngôn ngữ',
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'English (United States)',
+                            'Tiếng Việt',
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 14,
@@ -176,7 +176,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {},
                     ),
                     ProfileMenuItem(
-                      title: 'Notifications',
+                      title: 'Thông báo',
                       onTap: () {},
                       showDivider: false,
                     ),
@@ -185,7 +185,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     // Legal & Support Section
                     const Text(
-                      'Legal & Support',
+                      'Pháp lý & Hỗ trợ',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -194,15 +194,15 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 16),
                     ProfileMenuItem(
-                      title: 'Terms and Conditions',
+                      title: 'Điều khoản sử dụng',
                       onTap: () {},
                     ),
                     ProfileMenuItem(
-                      title: 'Help Centre',
+                      title: 'Trung tâm trợ giúp',
                       onTap: () {},
                     ),
                     ProfileMenuItem(
-                      title: 'App feedback',
+                      title: 'Phản hồi ứng dụng',
                       onTap: () {},
                       showDivider: false,
                     ),
@@ -217,7 +217,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       },
                       icon: const Icon(Ionicons.log_out_outline, color: Colors.black),
                       label: const Text(
-                        'Log Out',
+                        'Đăng xuất',
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 16,
