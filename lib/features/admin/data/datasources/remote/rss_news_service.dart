@@ -17,6 +17,8 @@ class RssNewsService {
   static const List<String> proxies = [
     'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
+    'https://thingproxy.freeboard.io/fetch/', // Proxy mới
+    'https://cors.eu.org/',
     'https://api.codetabs.com/v1/proxy?quest=',
   ];
 

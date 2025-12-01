@@ -15,15 +15,22 @@ class _NewsManagementPageState extends State<NewsManagementPage> {
   
   final List<String> _categories = [
     'all',
-    'Thể thao',
+    'Thời sự',
     'Chính trị',
     'Kinh tế',
+    'Thế giới',
+    'Kinh doanh',
     'Giải trí',
-    'Công nghệ',
-    'Sức khỏe',
+    'Thể thao',
+    'Pháp luật',
     'Giáo dục',
+    'Sức khỏe',
+    'Đời sống',
+    'Du lịch',
+    'Công nghệ',
+    'Số hóa',
+    'Xe',
     'Tổng hợp',
-    'Khác',
   ];
 
   @override

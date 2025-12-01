@@ -398,7 +398,7 @@ class _RssPickerDialogState extends State<RssPickerDialog> {
             child: Column(
               children: [
                 Text(
-                  '⏱️ Thời gian ước tính: 5-15 giây',
+                  '⏱️ Thời gian ước tính: 5-30 giây',
                   style: TextStyle(fontSize: 13, color: Colors.blue[700]),
                 ),
                 const SizedBox(height: 4),

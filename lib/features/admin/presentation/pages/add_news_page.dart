@@ -21,15 +21,20 @@ class _AddNewsPageState extends State<AddNewsPage> {
   String _selectedCategory = 'Tổng hợp';
 
   final List<String> _categories = [
-    'Thể thao',
-    'Chính trị',
-    'Kinh tế',
+    'Thời sự',
+    'Thế giới',
+    'Kinh doanh',
     'Giải trí',
-    'Công nghệ',
-    'Sức khỏe',
+    'Thể thao',
+    'Pháp luật',
     'Giáo dục',
+    'Sức khỏe',
+    'Đời sống',
+    'Du lịch',
+    'Công nghệ',
+    'Số hóa',
+    'Xe',
     'Tổng hợp',
-    'Khác',
   ];
 
   @override
