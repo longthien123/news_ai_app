@@ -98,33 +98,33 @@ class ExternalNewsModel {
       'content':
           description, // ✅ Dùng trực tiếp description (đã có nội dung hoặc lỗi từ webhook)
       'imageUrls': [if (urlToImage.isNotEmpty) urlToImage],
-      'category': _mapCategory(category),
+      'category': category == 'Tất cả' ? 'Tổng hợp' : category,
       'source': overrideSource ?? source,
     };
   }
 
-  String _mapCategory(String category) {
-    final categoryMap = {
-      'tất cả': 'Tổng hợp',
-      'thời sự': 'Chính trị',
-      'thế giới': 'Khác',
-      'kinh doanh': 'Kinh tế',
-      'kinh tế': 'Kinh tế',
-      'giải trí': 'Giải trí',
-      'thể thao': 'Thể thao',
-      'công nghệ': 'Công nghệ',
-      'số hóa': 'Công nghệ',
-      'sức khỏe': 'Sức khỏe',
-      'giáo dục': 'Giáo dục',
-      'pháp luật': 'Chính trị',
-      'đời sống': 'Tổng hợp',
-      'du lịch': 'Tổng hợp',
-      'xe': 'Khác',
-      'xã hội': 'Tổng hợp',
-      'văn hóa': 'Tổng hợp',
-    };
+  // String _mapCategory(String category) {
+  //   final categoryMap = {
+  //     'tất cả': 'Tổng hợp',
+  //     'thời sự': 'Chính trị',
+  //     'thế giới': 'Khác',
+  //     'kinh doanh': 'Kinh tế',
+  //     'kinh tế': 'Kinh tế',
+  //     'giải trí': 'Giải trí',
+  //     'thể thao': 'Thể thao',
+  //     'công nghệ': 'Công nghệ',
+  //     'số hóa': 'Công nghệ',
+  //     'sức khỏe': 'Sức khỏe',
+  //     'giáo dục': 'Giáo dục',
+  //     'pháp luật': 'Chính trị',
+  //     'đời sống': 'Tổng hợp',
+  //     'du lịch': 'Tổng hợp',
+  //     'xe': 'Khác',
+  //     'xã hội': 'Tổng hợp',
+  //     'văn hóa': 'Tổng hợp',
+  //   };
 
-    final lowerCategory = category.toLowerCase();
-    return categoryMap[lowerCategory] ?? 'Tổng hợp';
-  }
+  //   final lowerCategory = category.toLowerCase();
+  //   return categoryMap[lowerCategory] ?? 'Tổng hợp';
+  // }
 }
