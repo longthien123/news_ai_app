@@ -299,9 +299,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .orderBy('createdAt', descending: true)
           .get();
 
-      final comments = querySnapshot.docs
-          .map((doc) => CommentModel.fromFirestore(doc))
-          .toList();
+      final comments = await Future.wait(
+        querySnapshot.docs.map((doc) => CommentModel.fromFirestoreWithUserData(doc)),
+      );
 
       if (mounted) {
         setState(() {
@@ -473,13 +473,13 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .orderBy('createdAt', descending: false)
           .get();
 
-      final replies = repliesSnapshot.docs
-          .map((doc) => ReplyModel.fromFirestore(doc))
-          .toList();
+      final replies = await Future.wait(
+        repliesSnapshot.docs.map((doc) => ReplyModel.fromFirestoreWithUserData(doc)),
+      );
 
       if (mounted) {
         setState(() {
-          _repliesMap[commentId] = replies;
+          _repliesMap[commentId] = replies.cast<Reply>();
         });
       }
     } catch (e) {
@@ -906,6 +906,7 @@ $summary
                           controller: _commentController,
                           isPosting: _isPostingComment,
                           onPost: _postComment,
+                          userAvatar: FirebaseAuth.instance.currentUser?.photoURL,
                         ),
                         const SizedBox(height: 20),
 

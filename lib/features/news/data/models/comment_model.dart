@@ -11,6 +11,7 @@ class CommentModel extends Comment {
     required super.createdAt,
     super.likes,
     super.repliesCount,
+    super.userAvatar,
   });
 
   factory CommentModel.fromFirestore(DocumentSnapshot doc) {
@@ -24,6 +25,7 @@ class CommentModel extends Comment {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       likes: data['likes'] ?? 0,
       repliesCount: data['repliesCount'] ?? 0,
+      userAvatar: data['userAvatar'],
     );
   }
 
@@ -36,6 +38,7 @@ class CommentModel extends Comment {
     
     // Get updated username from users collection
     String userName = data['userName'] ?? 'Anonymous';
+    String? userAvatar;
     try {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -48,6 +51,7 @@ class CommentModel extends Comment {
         userName = userData?['username'] ?? 
                    userData?['fullName'] ?? 
                    userName;
+        userAvatar = userData?['photoUrl'];
       }
     } catch (e) {
       // If error, use the stored userName
@@ -62,6 +66,7 @@ class CommentModel extends Comment {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       likes: data['likes'] ?? 0,
       repliesCount: data['repliesCount'] ?? 0,
+      userAvatar: userAvatar ?? data['userAvatar'],
     );
   }
 
@@ -74,6 +79,7 @@ class CommentModel extends Comment {
       'createdAt': Timestamp.fromDate(createdAt),
       'likes': likes,
       'repliesCount': repliesCount,
+      'userAvatar': userAvatar,
     };
   }
 }

@@ -9,6 +9,7 @@ class ReplyModel extends Reply {
     required super.userName,
     required super.content,
     required super.createdAt,
+    super.userAvatar,
   });
 
   factory ReplyModel.fromFirestore(DocumentSnapshot doc) {
@@ -20,6 +21,7 @@ class ReplyModel extends Reply {
       userName: data['userName'] ?? 'Anonymous',
       content: data['content'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      userAvatar: data['userAvatar'],
     );
   }
 
@@ -32,6 +34,7 @@ class ReplyModel extends Reply {
     
     // Get updated username from users collection
     String userName = data['userName'] ?? 'Anonymous';
+    String? userAvatar;
     try {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -44,6 +47,7 @@ class ReplyModel extends Reply {
         userName = userData?['username'] ?? 
                    userData?['fullName'] ?? 
                    userName;
+        userAvatar = userData?['photoUrl'];
       }
     } catch (e) {
       // If error, use the stored userName
@@ -56,6 +60,7 @@ class ReplyModel extends Reply {
       userName: userName,
       content: data['content'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      userAvatar: userAvatar ?? data['userAvatar'],
     );
   }
 
@@ -66,6 +71,7 @@ class ReplyModel extends Reply {
       'userName': userName,
       'content': content,
       'createdAt': Timestamp.fromDate(createdAt),
+      'userAvatar': userAvatar,
     };
   }
 }

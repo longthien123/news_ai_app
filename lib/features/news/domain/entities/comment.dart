@@ -9,6 +9,7 @@ class Comment extends Equatable {
   final DateTime createdAt;
   final int likes;
   final int repliesCount;
+  final String? userAvatar;
 
   const Comment({
     required this.id,
@@ -19,6 +20,7 @@ class Comment extends Equatable {
     required this.createdAt,
     this.likes = 0,
     this.repliesCount = 0,
+    this.userAvatar,
   });
 
   @override
@@ -31,5 +33,6 @@ class Comment extends Equatable {
         createdAt,
         likes,
         repliesCount,
+        userAvatar,
       ];
 }
