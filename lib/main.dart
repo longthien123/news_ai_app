@@ -21,6 +21,7 @@ import 'features/auth/presentation/pages/register_page.dart';
 import 'features/auth/presentation/pages/email_verification_page.dart';
 import 'features/auth/presentation/pages/forgot_password_page.dart';
 import 'features/news/presentation/pages/news_home_page.dart';
+import 'features/splash/splash_screen.dart';
 
 // Import news files
 import 'features/admin/data/datasources/local/news_local_source.dart';
@@ -204,8 +205,9 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
-        initialRoute: '/',
+        initialRoute: '/splash',
         routes: {
+          '/splash': (context) => const SplashScreen(),
           '/': (context) => const AuthWrapper(),
           '/login': (context) => const LoginPage(),
           '/register': (context) => const RegisterPage(),
