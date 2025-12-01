@@ -7,6 +7,7 @@ class Reply extends Equatable {
   final String userName;
   final String content;
   final DateTime createdAt;
+  final String? userAvatar;
 
   const Reply({
     required this.id,
@@ -15,6 +16,7 @@ class Reply extends Equatable {
     required this.userName,
     required this.content,
     required this.createdAt,
+    this.userAvatar,
   });
 
   @override
@@ -25,5 +27,6 @@ class Reply extends Equatable {
         userName,
         content,
         createdAt,
+        userAvatar,
       ];
 }

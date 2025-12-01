@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/services/cloudinary_service.dart';
 import '../models/user_profile_model.dart';
 
 abstract class ProfileRemoteDataSource {
@@ -11,12 +11,16 @@ abstract class ProfileRemoteDataSource {
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   final FirebaseFirestore firestore;
-  final FirebaseStorage storage;
+  final CloudinaryService cloudinaryService;
 
   ProfileRemoteDataSourceImpl({
     required this.firestore,
-    FirebaseStorage? storage,
-  }) : storage = storage ?? FirebaseStorage.instance;
+    CloudinaryService? cloudinaryService,
+  }) : cloudinaryService = cloudinaryService ??
+            CloudinaryService(
+              cloudName: 'dcr56rtwl',
+              uploadPreset: 'news_upload',
+            );
 
   @override
   Future<UserProfileModel> getProfile(String userId) async {
@@ -49,13 +53,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<String> uploadAvatar(String userId, XFile imageFile) async {
     try {
-      final ref = storage.ref().child('avatars/$userId.jpg');
-      // Use putData for cross-platform support (works on Web)
-      final metadata = SettableMetadata(contentType: 'image/jpeg');
-      final data = await imageFile.readAsBytes();
-      await ref.putData(data, metadata);
-      final url = await ref.getDownloadURL();
-      return url;
+      return await cloudinaryService.uploadImage(imageFile);
     } catch (e) {
       throw Exception('Error uploading avatar: $e');
     }
