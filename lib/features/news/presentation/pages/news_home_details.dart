@@ -56,6 +56,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isScrolledToBottom = false;
 
+  // View tracking
+  bool _viewCounted = false;
+
   // TTS related
   late TtsService _ttsService;
   bool _isTtsPlaying = false;
@@ -72,6 +75,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     _startReadingSession();
     _scrollController.addListener(_onScroll);
     _initializeTts();
+    _startViewTracking();
   }
 
   @override
@@ -151,6 +155,33 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
       if (!_isScrolledToBottom) {
         setState(() => _isScrolledToBottom = true);
       }
+    }
+  }
+
+  Future<void> _startViewTracking() async {
+    // Wait for 10 seconds
+    await Future.delayed(const Duration(seconds: 10));
+    
+    // Check if widget is still mounted and view hasn't been counted yet
+    if (mounted && !_viewCounted) {
+      await _incrementViewCount();
+      _viewCounted = true;
+    }
+  }
+
+  Future<void> _incrementViewCount() async {
+    try {
+      // Increment view count in Firestore
+      await FirebaseFirestore.instance
+          .collection('news')
+          .doc(widget.news.id)
+          .update({
+        'views': FieldValue.increment(1),
+      });
+      
+      debugPrint('📊 View count incremented for: ${widget.news.title}');
+    } catch (e) {
+      debugPrint('Error incrementing view count: $e');
     }
   }
 
@@ -886,7 +917,7 @@ $summary
                         // Related News Section
                         if (_relatedNews.isNotEmpty) ...[
                           const Text(
-                            'Related news',
+                            'Tin tức liên quan',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
