@@ -147,7 +147,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text(
-            'Edit Profile',
+            'Chỉnh sửa hồ sơ',
             style: TextStyle(
               color: Colors.black,
               fontSize: 20,
@@ -210,12 +210,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Fields
                   _buildTextField(
-                    label: 'User name',
+                    label: 'Tên tài khoản',
                     controller: _userNameController,
                   ),
                   const SizedBox(height: 20),
                   _buildTextField(
-                    label: 'Full name',
+                    label: 'Họ và tên',
                     controller: _fullNameController,
                   ),
                   const SizedBox(height: 20),
@@ -229,7 +229,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     onTap: () => _selectDate(context),
                     child: AbsorbPointer(
                       child: _buildTextField(
-                        label: 'Date of Birth',
+                        label: 'Ngày sinh',
                         controller: _dobController,
                         suffixIcon: const Icon(Ionicons.calendar_outline, color: Colors.grey),
                       ),
@@ -248,7 +248,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: const [
                           Text(
-                            'Change password',
+                            'Đổi mật khẩu',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -278,7 +278,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         elevation: 0,
                       ),
                       child: const Text(
-                        'Save Changes',
+                        'Lưu thay đổi',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
