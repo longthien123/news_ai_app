@@ -38,6 +38,7 @@ class SavedNewsError extends SavedNewsState {
 class SavedNewsCubit extends Cubit<SavedNewsState> {
   final NewsRepository newsRepository;
   final FirebaseBookmarkManager bookmarkManager;
+  List<News> _allSavedNews = [];
 
   SavedNewsCubit({
     required this.newsRepository,
@@ -73,6 +74,7 @@ class SavedNewsCubit extends Cubit<SavedNewsState> {
       } else {
         // Sort by most recent first (assuming newer IDs or we can sort by createdAt)
         savedNews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _allSavedNews = savedNews;
         emit(SavedNewsLoaded(savedNews: savedNews));
       }
     } catch (e) {
@@ -91,5 +93,25 @@ class SavedNewsCubit extends Cubit<SavedNewsState> {
 
   void refresh() {
     loadSavedNews();
+  }
+
+  void searchSavedNews(String query) {
+    if (query.trim().isEmpty) {
+      emit(SavedNewsLoaded(savedNews: _allSavedNews));
+      return;
+    }
+
+    final lowerQuery = query.toLowerCase();
+    final filteredNews = _allSavedNews.where((news) {
+      final lowerTitle = news.title.toLowerCase();
+      final lowerCategory = news.category.toLowerCase();
+      return lowerTitle.contains(lowerQuery) || lowerCategory.contains(lowerQuery);
+    }).toList();
+
+    if (filteredNews.isEmpty) {
+      emit(SavedNewsEmpty());
+    } else {
+      emit(SavedNewsLoaded(savedNews: filteredNews));
+    }
   }
 }

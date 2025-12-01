@@ -33,8 +33,21 @@ class SavedNewsPage extends StatelessWidget {
   }
 }
 
-class SavedNewsView extends StatelessWidget {
+class SavedNewsView extends StatefulWidget {
   const SavedNewsView({super.key});
+
+  @override
+  State<SavedNewsView> createState() => _SavedNewsViewState();
+}
+
+class _SavedNewsViewState extends State<SavedNewsView> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +104,10 @@ class SavedNewsView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    context.read<SavedNewsCubit>().searchSavedNews(value);
+                  },
                   decoration: InputDecoration(
                     hintText: 'Tìm kiếm trong những bài viết bạn đã lưu...',
                     hintStyle: TextStyle(
@@ -102,6 +119,20 @@ class SavedNewsView extends StatelessWidget {
                       color: Colors.grey[600],
                       size: 20,
                     ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Ionicons.close_circle,
+                              color: Colors.grey[600],
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              context.read<SavedNewsCubit>().searchSavedNews('');
+                              setState(() {});
+                            },
+                          )
+                        : null,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -125,18 +156,19 @@ class SavedNewsView extends StatelessWidget {
                 }
 
                 if (state is SavedNewsEmpty) {
+                  final isSearching = _searchController.text.isNotEmpty;
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Ionicons.bookmark_outline,
+                          isSearching ? Ionicons.search_outline : Ionicons.bookmark_outline,
                           size: 80,
                           color: Colors.grey[400],
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Chưa có tin tức nào được lưu',
+                          isSearching ? 'Không tìm thấy kết quả' : 'Chưa có tin tức nào được lưu',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -145,7 +177,9 @@ class SavedNewsView extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Đánh dấu những bản tin bạn muốn xem lại sau',
+                          isSearching 
+                              ? 'Hãy thử tìm kiếm với từ khóa khác'
+                              : 'Đánh dấu những bản tin bạn muốn xem lại sau',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[500],
