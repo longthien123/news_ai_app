@@ -20,6 +20,7 @@ import '../cubit/news_cubit.dart';
 import '../widgets/news_home_widgets.dart';
 
 import 'news_saved.dart';
+import 'news_search_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 
 class NewsHomePage extends StatelessWidget {
@@ -316,7 +317,14 @@ class _NewsHomeViewState extends State<NewsHomeView> {
                 ),
                 child: IconButton(
                   icon: const Icon(Ionicons.search_outline, color: Colors.black, size: 20),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NewsSearchPage(),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
