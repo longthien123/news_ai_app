@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.app_news_ai",
+      "sha256_cert_fingerprints": [
+        "BC:7D:66:E1:30:FC:A1:0A:0E:72:52:BA:22:5A:2C:21:58:24:8E:76:40:91:E2:B4:15:3E:81:81:C7:95:BA:3F"
+      ]
+    }
+  }
+]
