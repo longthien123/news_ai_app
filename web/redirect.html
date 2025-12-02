@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đang mở News AI App...</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        p {
+            font-size: 16px;
+            opacity: 0.9;
+            margin: 10px 0;
+        }
+        .instructions {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h1>📰 Đang mở 4TK News...</h1>
+        <p id="status">Đang chuyển hướng...</p>
+        
+        <div class="instructions">
+            <p><strong>Nếu app không tự động mở:</strong></p>
+            <p>1. Chọn "Mở trong News AI App" khi có thông báo</p>
+            <p>2. Hoặc copy link và paste vào trình duyệt</p>
+        </div>
+        
+        <a href="#" class="btn" id="manualOpen">Mở thủ công</a>
+    </div>
+
+    <script>
+        // Lấy newsId từ URL query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const newsId = urlParams.get('id');
+        
+        if (newsId) {
+            // Tạo deep link
+            const deepLink = `newsai://open/${newsId}`;
+            
+            // Thử mở app ngay lập tức
+            window.location.href = deepLink;
+            
+            // Cập nhật button
+            document.getElementById('manualOpen').href = deepLink;
+            document.getElementById('status').textContent = 'Đang mở app...';
+            
+            // Sau 3 giây, hiển thị hướng dẫn
+            setTimeout(() => {
+                document.getElementById('status').innerHTML = 
+                    '⚠️ App chưa mở?<br>Bấm nút bên dưới hoặc chọn "Mở trong News AI App"';
+            }, 3000);
+        } else {
+            document.getElementById('status').textContent = '❌ Link không hợp lệ';
+        }
+    </script>
+</body>
+</html>
