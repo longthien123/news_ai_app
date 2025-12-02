@@ -1,6 +1,9 @@
+import 'package:app_news_ai/core/config/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ionicons/ionicons.dart';
 import '../../domain/entities/news.dart';
 import '../../domain/entities/comment.dart';
 import '../../domain/entities/reply.dart';
@@ -781,62 +784,87 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   }
 
   Future<void> _showShareOptions() async {
-    // Show loading indicator
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              ),
-              SizedBox(width: 16),
-              Text('Đang tạo tóm tắt AI để chia sẻ...'),
-            ],
-          ),
-          duration: Duration(seconds: 10), // Long duration, will hide manually
+    // Link HTTPS - CÓ THỂ CLICK trực tiếp trong mọi app!
+    final encodedTitle = Uri.encodeComponent(widget.news.title);
+    final clickableLink = 'https://4tk-news.vercel.app/share?id=${widget.news.id}&t=$encodedTitle';
+    
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Chia sẻ tin tức',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.news.title,
+              style: const TextStyle(color: Colors.grey),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Ionicons.link, color: AppColors.primary),
+              title: const Text('Copy link'),
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: clickableLink));
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.white),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Đã sao chép link vào clipboard!'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: AppColors.primary,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Ionicons.share, color: AppColors.primary),
+              title: const Text('Chia sẻ qua ứng dụng khác'),
+              subtitle: const Text('Messenger, Zalo, Email...'),
+              onTap: () async {
+                Navigator.pop(context);
+                // Chỉ gửi link - không thể tránh duplicate nếu có text
+                final shareText = clickableLink;
+                try {
+                  await Share.share(shareText, subject: widget.news.title);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Lỗi: $e')),
+                    );
+                  }
+                }
+              },
+            )
+          ],
         ),
-      );
-    }
-
-    try {
-      // 1. Generate AI Summary
-      final summary = await _aiSummaryService.summarizeNews(
-        widget.news.title,
-        widget.news.content,
-      );
-
-      // Hide loading SnackBar
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      }
-
-      // 2. Construct Share Text
-      final shareText = '''
-${widget.news.title}
-
-TÓM TẮT BỞI AI:
-$summary
-
-Đọc chi tiết tại News AI App
-''';
-
-      // 3. Share using native share sheet
-      await Share.share(
-        shareText,
-        subject: widget.news.title,
-      );
-    } catch (e) {
-      debugPrint('Error sharing: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi chia sẻ: $e')),
-        );
-      }
-    }
+      ),
+    );
   }
 
   @override
