@@ -10,7 +10,7 @@ import '../cubit/news_cubit.dart';
 class RssPickerDialog extends StatefulWidget {
   final Function(ExternalNewsModel) onSelect;
 
-  const RssPickerDialog({Key? key, required this.onSelect}) : super(key: key);
+  const RssPickerDialog({super.key, required this.onSelect});
 
   @override
   State<RssPickerDialog> createState() => _RssPickerDialogState();

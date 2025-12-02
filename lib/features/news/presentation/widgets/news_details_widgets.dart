@@ -550,7 +550,7 @@ class CommentsListWidget extends StatelessWidget {
       children: [
         ...displayedComments
             .map((comment) => onBuildComment(comment) as Widget)
-            .toList(),
+            ,
 
         if (hasMore)
           Padding(

@@ -2,8 +2,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/fcm_service.dart';
 import '../services/auto_notification_service.dart';
-import '../services/gemini_recommendation_service.dart';
-import '../datasources/notification_datasource.dart';
 import '../models/smart_notification_model.dart';
 import '../../domain/entities/smart_notification.dart';
 import '../../domain/entities/user_preference.dart';

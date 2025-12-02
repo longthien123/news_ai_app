@@ -182,13 +182,13 @@ class TtsService {
 
       // Nếu thêm câu này vào chunk hiện tại vẫn < 3000 ký tự
       if (currentChunk.length + sentence.length < 3000) {
-        currentChunk += sentence + '. ';
+        currentChunk += '$sentence. ';
       } else {
         // Chunk đầy, lưu lại và bắt đầu chunk mới
         if (currentChunk.isNotEmpty) {
           chunks.add(currentChunk.trim());
         }
-        currentChunk = sentence + '. ';
+        currentChunk = '$sentence. ';
       }
     }
 

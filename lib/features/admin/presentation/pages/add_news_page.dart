@@ -1,3 +1,4 @@
+import 'package:app_news_ai/core/config/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/news_cubit.dart';
@@ -5,7 +6,7 @@ import '../../data/models/external_news_model.dart';
 import '../widgets/rss_picker_dialog.dart';
 
 class AddNewsPage extends StatefulWidget {
-  const AddNewsPage({Key? key}) : super(key: key);
+  const AddNewsPage({super.key});
 
   @override
   State<AddNewsPage> createState() => _AddNewsPageState();
@@ -125,40 +126,94 @@ class _AddNewsPageState extends State<AddNewsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Thêm tin tức'),
+        elevation: 0,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Thêm tin tức',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
-          TextButton.icon(
-            onPressed: _showRssDialog,
-            icon: const Icon(Icons.flash_on, color: Colors.black),
-            label: const Text(
-              'Thêm nhanh',
-              style: TextStyle(color: Colors.black),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextButton.icon(
+              onPressed: _showRssDialog,
+              icon: const Icon(Icons.flash_on, color: Colors.white, size: 20),
+              label: const Text(
+                'Thêm nhanh',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
-          IconButton(onPressed: _submit, icon: const Icon(Icons.check)),
+          const SizedBox(width: 8),
         ],
       ),
       body: BlocConsumer<NewsCubit, NewsState>(
         listener: (c, state) {
           if (state is NewsAdded) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('✅ Thêm tin thành công')),
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Text('Thêm tin tức thành công'),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             );
             Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
           } else if (state is NewsError && state is! ExternalNewsLoading) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(state.message)),
+                  ],
+                ),
                 backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           }
         },
         builder: (c, state) {
           if (state is NewsLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: colorScheme.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Đang xử lý...',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           return SingleChildScrollView(
@@ -168,153 +223,399 @@ class _AddNewsPageState extends State<AddNewsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Tiêu đề *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.title),
-                    ),
-                    maxLines: 2,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Nhập tiêu đề' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _contentController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nội dung *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.description),
-                    ),
-                    maxLines: 8,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Nhập nội dung' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: _selectedCategory,
-                    decoration: const InputDecoration(
-                      labelText: 'Loại tin *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.category),
-                    ),
-                    items: _categories
-                        .map(
-                          (cat) =>
-                              DropdownMenuItem(value: cat, child: Text(cat)),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => _selectedCategory = v);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _sourceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nguồn tin *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.source),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Nhập nguồn tin' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _imageUrlController,
-                          decoration: const InputDecoration(
-                            labelText: 'URL ảnh',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.image),
-                          ),
-                          onSubmitted: (_) => _addImageUrl(),
-                        ),
+                  // Header section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.primary.withOpacity(0.1),
+                          colorScheme.primary.withOpacity(0.05),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: _addImageUrl,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Thêm'),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.2),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (_imageUrls.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          'Ảnh minh họa (${_imageUrls.length}):',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
+                        Icon(
+                          Icons.info_outline,
+                          color: colorScheme.primary,
+                          size: 24,
                         ),
-                        const SizedBox(height: 8),
-                        Column(
-                          children: _imageUrls.asMap().entries.map((entry) {
-                            final idx = entry.key;
-                            final url = entry.value;
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 6.0),
-                              child: ListTile(
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Image.network(
-                                    url,
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 60,
-                                      height: 60,
-                                      color: Colors.grey[300],
-                                      child: const Icon(Icons.broken_image),
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  url,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () => _removeImageAt(idx),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Điền đầy đủ thông tin bên dưới để thêm tin tức mới',
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: _submit,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Thêm tin tức'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 14,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Title section
+                  _buildSectionLabel('Tiêu đề bài viết', Icons.title),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: InputDecoration(
+                      hintText: 'Nhập tiêu đề hấp dẫn...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      textStyle: const TextStyle(fontSize: 16),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.edit, color: colorScheme.primary),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                    maxLines: 2,
+                    style: const TextStyle(fontSize: 16),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Vui lòng nhập tiêu đề' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Content section
+                  _buildSectionLabel('Nội dung bài viết', Icons.description),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _contentController,
+                    decoration: InputDecoration(
+                      hintText: 'Nhập nội dung chi tiết...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.article, color: colorScheme.primary),
+                      contentPadding: const EdgeInsets.all(16),
+                      alignLabelWithHint: true,
+                    ),
+                    maxLines: 8,
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Vui lòng nhập nội dung' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Category and Source row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel('Danh mục', Icons.category),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              value: _selectedCategory,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey[300]!),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                              icon: Icon(Icons.arrow_drop_down, color: colorScheme.primary),
+                              items: _categories
+                                  .map(
+                                    (cat) => DropdownMenuItem(
+                                      value: cat,
+                                      child: Text(cat),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v == null) return;
+                                setState(() => _selectedCategory = v);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Source section
+                  _buildSectionLabel('Nguồn tin', Icons.source),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _sourceController,
+                    decoration: InputDecoration(
+                      hintText: 'VD: VnExpress, Tuổi Trẻ...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.newspaper, color: colorScheme.primary),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                    style: const TextStyle(fontSize: 16),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Vui lòng nhập nguồn tin' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Image section
+                  _buildSectionLabel('Hình ảnh minh họa', Icons.photo_library),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _imageUrlController,
+                                decoration: InputDecoration(
+                                  hintText: 'Nhập URL hình ảnh...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  prefixIcon: Icon(Icons.link, color: Colors.grey[600]),
+                                  contentPadding: const EdgeInsets.all(12),
+                                ),
+                                onSubmitted: (_) => _addImageUrl(),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: _addImageUrl,
+                              icon: const Icon(Icons.add, size: 20),
+                              label: const Text('Thêm'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_imageUrls.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          const Divider(),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.collections,
+                                color: colorScheme.primary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Đã thêm ${_imageUrls.length} ảnh',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _imageUrls.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemBuilder: (_, idx) {
+                              final url = _imageUrls[idx];
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                ),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.all(8),
+                                  leading: ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.network(
+                                      url,
+                                      width: 70,
+                                      height: 70,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        width: 70,
+                                        height: 70,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Icon(
+                                          Icons.broken_image,
+                                          size: 30,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    url,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () => _removeImageAt(idx),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 32),
+                  
+                  // Submit button
+                  ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.publish, size: 24),
+                        SizedBox(width: 12),
+                        Text(
+                          'Đăng tin tức',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSectionLabel(String label, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[700]),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '*',
+          style: TextStyle(
+            color: Colors.red[400],
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

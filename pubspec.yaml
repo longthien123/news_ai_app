@@ -75,6 +75,9 @@ dependencies:
   app_links: ^6.3.3
   firebase_dynamic_links: ^6.1.10
 
+  # Charts
+  fl_chart: ^0.69.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
