@@ -19,6 +19,7 @@ import '../../data/datasources/remote/ai_summary_service.dart';
 import '../../../notification/data/models/reading_session_model.dart';
 import '../../../../core/utils/tts_service.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/reading_tracker_service.dart'; // ⭐ AI Recommendation Tracking
 
 //news
 
@@ -55,6 +56,10 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   // AI Summary related
   final AISummaryService _aiSummaryService = AISummaryServiceImpl();
 
+  // ⭐ AI Recommendation Tracking
+  final ReadingTrackerService _readingTracker = ReadingTrackerService();
+  DateTime? _viewStartTime;
+
   // Reading session tracking
   String? _sessionId;
   DateTime? _startedAt;
@@ -71,6 +76,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   @override
   void initState() {
     super.initState();
+    _viewStartTime = DateTime.now(); // ⭐ Bắt đầu tracking AI
     _bookmarkManager = FirebaseBookmarkManager.getInstance();
     _ttsService = TtsService();
     _initBookmark();
@@ -85,6 +91,18 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
 
   @override
   void dispose() {
+    // ⭐ Track AI Recommendation trước khi dispose
+    if (_viewStartTime != null) {
+      final readDuration = DateTime.now().difference(_viewStartTime!).inSeconds;
+      if (readDuration > 5) { // Chỉ track nếu đọc > 5s
+        _readingTracker.trackNewsReading(
+          news: widget.news,
+          readDurationSeconds: readDuration,
+          keywords: [],
+        );
+      }
+    }
+    
     _commentController.dispose();
     _replyController.dispose();
     _scrollController.dispose();
