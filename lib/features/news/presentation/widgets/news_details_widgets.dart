@@ -434,12 +434,14 @@ class CommentInputField extends StatelessWidget {
   final TextEditingController controller;
   final bool isPosting;
   final VoidCallback onPost;
+  final String? userAvatar;
 
   const CommentInputField({
     super.key,
     required this.controller,
     required this.isPosting,
     required this.onPost,
+    this.userAvatar,
   });
 
   @override
@@ -449,7 +451,12 @@ class CommentInputField extends StatelessWidget {
         CircleAvatar(
           radius: 20,
           backgroundColor: AppColors.primary.withOpacity(0.2),
-          child: Icon(Ionicons.person, size: 20, color: AppColors.primary),
+          backgroundImage: userAvatar != null && userAvatar!.isNotEmpty
+              ? NetworkImage(userAvatar!)
+              : null,
+          child: userAvatar != null && userAvatar!.isNotEmpty
+              ? null
+              : Icon(Ionicons.person, size: 20, color: AppColors.primary),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -622,11 +629,16 @@ class CommentCard extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.primary.withOpacity(0.2),
-                child: Icon(
-                  Ionicons.person,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
+                backgroundImage: comment.userAvatar != null && comment.userAvatar!.isNotEmpty
+                    ? NetworkImage(comment.userAvatar!)
+                    : null,
+                child: comment.userAvatar != null && comment.userAvatar!.isNotEmpty
+                    ? null
+                    : Icon(
+                        Ionicons.person,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -881,12 +893,17 @@ class ReplyCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 14,
-                backgroundColor: AppColors.primary.withOpacity(0.15),
-                child: Icon(
-                  Ionicons.person,
-                  size: 14,
-                  color: AppColors.primary,
-                ),
+                backgroundColor: AppColors.primary.withOpacity(0.2),
+                backgroundImage: reply.userAvatar != null && reply.userAvatar!.isNotEmpty
+                    ? NetworkImage(reply.userAvatar!)
+                    : null,
+                child: reply.userAvatar != null && reply.userAvatar!.isNotEmpty
+                    ? null
+                    : Icon(
+                        Ionicons.person,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
               ),
               const SizedBox(width: 8),
               Expanded(
