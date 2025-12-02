@@ -33,8 +33,8 @@ class ExternalNewsModel {
       imageUrl = item.enclosure!.url!;
     }
     // Hoặc từ media:content
-    else if (item.content?.images != null && item.content!.images!.isNotEmpty) {
-      imageUrl = item.content!.images!.first;
+    else if (item.content?.images != null && item.content!.images.isNotEmpty) {
+      imageUrl = item.content!.images.first;
     }
 
     // Parse pubDate an toàn

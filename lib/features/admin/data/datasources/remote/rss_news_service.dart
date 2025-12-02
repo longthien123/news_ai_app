@@ -135,7 +135,7 @@ class RssNewsService {
           if (attempt < 2) {
             await Future.delayed(const Duration(seconds: 1));
           }
-        } on http.ClientException catch (e) {
+        } on http.ClientException {
           print('❌ Network error');
           if (attempt < 2) {
             await Future.delayed(const Duration(seconds: 2));

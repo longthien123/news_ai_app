@@ -43,8 +43,9 @@ class ReadingSession extends Equatable {
     int score = 0;
     
     // Thời gian đọc (max 40 điểm)
-    if (durationSeconds >= 120) score += 40; // >= 2 phút
-    else if (durationSeconds >= 60) score += 30; // >= 1 phút
+    if (durationSeconds >= 120) {
+      score += 40; // >= 2 phút
+    } else if (durationSeconds >= 60) score += 30; // >= 1 phút
     else if (durationSeconds >= 30) score += 20; // >= 30s
     else score += 10;
     

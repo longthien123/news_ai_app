@@ -47,8 +47,8 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   Set<String> _likedComments = {};
 
   // Reply related
-  Map<String, List<Reply>> _repliesMap = {};
-  Map<String, bool> _showRepliesMap = {};
+  final Map<String, List<Reply>> _repliesMap = {};
+  final Map<String, bool> _showRepliesMap = {};
   String? _replyingToCommentId;
   final TextEditingController _replyController = TextEditingController();
 
@@ -113,14 +113,14 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
       } else {
         // Nếu không phát, bắt đầu đọc
         String contentToSpeak = "${widget.news.title}. ${widget.news.content}";
-        
+
         // Loại bỏ các ký tự đặc biệt có thể gây lỗi
         contentToSpeak = contentToSpeak
             .replaceAll(RegExp(r'<[^>]*>'), '') // Loại bỏ HTML tags
             .replaceAll(RegExp(r'&[^;]+;'), '') // Loại bỏ HTML entities
             .replaceAll(RegExp(r'\s+'), ' ') // Loại bỏ khoảng trắng thừa
             .trim();
-        
+
         await _ttsService.speak(contentToSpeak);
         setState(() {
           _isTtsPlaying = true;
@@ -156,7 +156,8 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 100) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 100) {
       if (!_isScrolledToBottom) {
         setState(() => _isScrolledToBottom = true);
       }
@@ -166,7 +167,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   Future<void> _startViewTracking() async {
     // Wait for 10 seconds
     await Future.delayed(const Duration(seconds: 10));
-    
+
     // Check if widget is still mounted and view hasn't been counted yet
     if (mounted && !_viewCounted) {
       await _incrementViewCount();
@@ -176,14 +177,44 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
 
   Future<void> _incrementViewCount() async {
     try {
-      // Increment view count in Firestore
+      final now = DateTime.now();
+      final dateKey =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+
+      // 1. Increment tổng view count của tin tức
       await FirebaseFirestore.instance
           .collection('news')
           .doc(widget.news.id)
-          .update({
-        'views': FieldValue.increment(1),
+          .update({'views': FieldValue.increment(1)});
+
+      // 2. Cập nhật daily_views cho tin tức này
+      final dailyDocId = '${dateKey}_${widget.news.id}';
+      final dailyRef = FirebaseFirestore.instance
+          .collection('daily_views')
+          .doc(dailyDocId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final dailyDoc = await transaction.get(dailyRef);
+
+        if (dailyDoc.exists) {
+          // Tăng view count
+          transaction.update(dailyRef, {
+            'viewCount': FieldValue.increment(1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Tạo document mới
+          final dateOnly = DateTime(now.year, now.month, now.day);
+          transaction.set(dailyRef, {
+            'date': Timestamp.fromDate(dateOnly),
+            'newsId': widget.news.id,
+            'category': widget.news.category,
+            'viewCount': 1,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
       });
-      
+
       debugPrint('📊 View count incremented for: ${widget.news.title}');
     } catch (e) {
       debugPrint('Error incrementing view count: $e');
@@ -194,7 +225,8 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    _sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}_${widget.news.id}';
+    _sessionId =
+        'session_${DateTime.now().millisecondsSinceEpoch}_${widget.news.id}';
     _startedAt = DateTime.now();
 
     final session = ReadingSessionModel(
@@ -219,7 +251,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
         .doc(_sessionId)
         .set(sessionData);
 
-    print('📖 Started reading session: ${widget.news.title.substring(0, 30)}...');
+    print(
+      '📖 Started reading session: ${widget.news.title.substring(0, 30)}...',
+    );
   }
 
   Future<void> _endReadingSession() async {
@@ -235,12 +269,14 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
         .collection('readingSessions')
         .doc(_sessionId)
         .update({
-      'durationSeconds': duration,
-      'isBookmarked': _isBookmarked,
-      'isCompleted': _isScrolledToBottom,
-    });
+          'durationSeconds': duration,
+          'isBookmarked': _isBookmarked,
+          'isCompleted': _isScrolledToBottom,
+        });
 
-    print('📖 Ended reading session: ${duration}s, bookmarked: $_isBookmarked, completed: $_isScrolledToBottom');
+    print(
+      '📖 Ended reading session: ${duration}s, bookmarked: $_isBookmarked, completed: $_isScrolledToBottom',
+    );
   }
 
   Future<void> _initBookmark() async {
@@ -305,7 +341,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .get();
 
       final comments = await Future.wait(
-        querySnapshot.docs.map((doc) => CommentModel.fromFirestoreWithUserData(doc)),
+        querySnapshot.docs.map(
+          (doc) => CommentModel.fromFirestoreWithUserData(doc),
+        ),
       );
 
       if (mounted) {
@@ -479,7 +517,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
           .get();
 
       final replies = await Future.wait(
-        repliesSnapshot.docs.map((doc) => ReplyModel.fromFirestoreWithUserData(doc)),
+        repliesSnapshot.docs.map(
+          (doc) => ReplyModel.fromFirestoreWithUserData(doc),
+        ),
       );
 
       if (mounted) {
@@ -788,8 +828,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   Future<void> _showShareOptions() async {
     // Link HTTPS - CÓ THỂ CLICK trực tiếp trong mọi app!
     final encodedTitle = Uri.encodeComponent(widget.news.title);
-    final clickableLink = 'https://4tk-news.vercel.app/share?id=${widget.news.id}&t=$encodedTitle';
-    
+    final clickableLink =
+        'https://4tk-news.vercel.app/share?id=${widget.news.id}&t=$encodedTitle';
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -856,13 +897,13 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                   await Share.share(shareText, subject: widget.news.title);
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Lỗi: $e')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
                   }
                 }
               },
-            )
+            ),
           ],
         ),
       ),
@@ -936,7 +977,8 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                           controller: _commentController,
                           isPosting: _isPostingComment,
                           onPost: _postComment,
-                          userAvatar: FirebaseAuth.instance.currentUser?.photoURL,
+                          userAvatar:
+                              FirebaseAuth.instance.currentUser?.photoURL,
                         ),
                         const SizedBox(height: 20),
 

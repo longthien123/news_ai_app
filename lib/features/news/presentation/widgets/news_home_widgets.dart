@@ -1,4 +1,3 @@
-import 'package:app_news_ai/core/config/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../pages/news_home_details.dart';

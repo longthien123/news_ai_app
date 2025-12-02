@@ -7,7 +7,7 @@ import 'dart:async';
 class EmailVerificationPage extends StatefulWidget {
   final String email;
   
-  const EmailVerificationPage({Key? key, required this.email}) : super(key: key);
+  const EmailVerificationPage({super.key, required this.email});
 
   @override
   State<EmailVerificationPage> createState() => _EmailVerificationPageState();

@@ -259,7 +259,7 @@ class _MyAppState extends State<MyApp> {
 }
 
 class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
+  const AuthWrapper({super.key});
 
   // ✅ Danh sách email admin
   static const List<String> adminEmails = ['longthienl80@gmail.com'];
