@@ -17,6 +17,7 @@ import '../widgets/ai_summary_button.dart';
 import '../widgets/ai_summary_bottom_sheet.dart';
 import '../../data/datasources/remote/ai_summary_service.dart';
 import '../../../notification/data/models/reading_session_model.dart';
+import '../../../notification/data/services/reading_history_service.dart';
 import '../../../../core/utils/tts_service.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -81,6 +82,16 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     _scrollController.addListener(_onScroll);
     _initializeTts();
     _startViewTracking();
+    _trackReadingHistory(); // Track khi user mở tin
+  }
+  
+  /// Track reading history để phân tích categories yêu thích
+  Future<void> _trackReadingHistory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await trackUserReadNews(user.uid, widget.news.id);
+      print('📖 Tracked reading: ${widget.news.title.substring(0, 30)}...');
+    }
   }
 
   @override

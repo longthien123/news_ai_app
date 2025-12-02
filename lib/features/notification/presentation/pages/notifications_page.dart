@@ -137,12 +137,21 @@ class NotificationCard extends StatelessWidget {
           ],
         ),
         onTap: () {
-          // Navigate to news detail
-          Navigator.pushNamed(
-            context,
-            '/news-detail',
-            arguments: notification.newsId,
-          );
+          print('📱 Notification tapped: newsId=${notification.newsId}');
+          
+          // Navigate to news detail if newsId exists
+          if (notification.newsId != null && notification.newsId!.isNotEmpty) {
+            Navigator.pushNamed(
+              context,
+              '/news-detail',
+              arguments: notification.newsId,
+            );
+          } else {
+            print('⚠️ No newsId found in notification');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Không tìm thấy bài báo')),
+            );
+          }
         },
       ),
     );

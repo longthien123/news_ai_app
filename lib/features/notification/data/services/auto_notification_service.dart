@@ -91,8 +91,8 @@ class AutoNotificationService {
           userPreference: userPreference,
         );
 
-        // Chỉ gửi notification nếu score >= 0.5 (tránh spam)
-        if (relevanceScore < 0.5) {
+        // Giảm threshold xuống 0.3 để dễ test (gốc: 0.5)
+        if (relevanceScore < 0.3) {
           print('Skip ${news.title.substring(0, 30)}... - Low score: $relevanceScore');
           continue;
         }
@@ -137,10 +137,11 @@ class AutoNotificationService {
         // Save to Firestore
         await notificationDataSource.saveNotification(notification);
 
-        // Show real push notification immediately
+        // Show real push notification immediately with newsId payload
         await notificationDataSource.showLocalNotification(
           title: notification.title,
           body: notification.body,
+          payload: {'newsId': news.id},
         );
         
         // Send FCM push notification if user has token
@@ -172,13 +173,15 @@ class AutoNotificationService {
       }
       
       // This would typically be done from your backend/Firebase Functions
-      // For demo, we'll just log it
+      // For demo, we'll just log it with newsId data
       print('📨 Would send FCM to token: ${fcmToken.substring(0, 20)}...');
       print('📨 Title: ${notification.title}');
       print('📨 Body: ${notification.body}');
+      print('📨 Data: {newsId: ${notification.newsId}}');
       
       // Note: In production, use Firebase Admin SDK from backend to send FCM
-      // or use Firebase Cloud Functions triggers
+      // with data payload: {'newsId': notification.newsId}
+      // Example: message.data = {'newsId': notification.newsId}
       
     } catch (e) {
       print('Error sending FCM: $e');
@@ -231,10 +234,11 @@ class AutoNotificationService {
 
         await notificationDataSource.saveNotification(notification);
         
-        // Show immediate notification for breaking news
+        // Show immediate notification for breaking news with newsId payload
         await notificationDataSource.showLocalNotification(
           title: notification.title,
           body: notification.body,
+          payload: {'newsId': doc.id},
         );
         
         // Send FCM push notification

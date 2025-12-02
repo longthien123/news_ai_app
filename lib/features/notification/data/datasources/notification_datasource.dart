@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/smart_notification_model.dart';
+import '../services/notification_navigation_service.dart';
 
 class NotificationDataSource {
   final FirebaseFirestore firestore;
@@ -26,7 +27,8 @@ class NotificationDataSource {
       settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         print('📱 Notification tapped: ${response.payload}');
-        // Handle notification tap - could navigate to news detail
+        // Navigate to news detail
+        notificationNavigationService.handleNotificationPayload(response.payload);
       },
     );
     
@@ -132,12 +134,22 @@ class NotificationDataSource {
     String? imageUrl,
     Map<String, dynamic>? payload,
   }) async {
+    // Tạo payload string để navigate khi click
+    String? payloadString;
+    if (payload != null && payload['newsId'] != null) {
+      payloadString = 'newsId:${payload['newsId']}';
+    }
+    
     const androidDetails = AndroidNotificationDetails(
       'smart_notifications',
       'Smart Notifications',
       channelDescription: 'AI-powered personalized notifications',
-      importance: Importance.high,
+      importance: Importance.max, // Tăng lên max
       priority: Priority.high,
+      playSound: true, // Bật sound
+      enableVibration: true, // Bật vibration
+      enableLights: true, // Bật LED
+      showWhen: true, // Hiện thời gian
     );
 
     const iosDetails = DarwinNotificationDetails();
@@ -148,10 +160,13 @@ class NotificationDataSource {
     );
 
     await localNotifications.show(
-      DateTime.now().millisecond,
+      DateTime.now().millisecondsSinceEpoch ~/ 1000, // Unique ID
       title,
       body,
       details,
+      payload: payloadString,
     );
+    
+    print('📱 Notification shown: $title with payload: $payloadString');
   }
 }

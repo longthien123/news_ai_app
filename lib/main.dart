@@ -21,6 +21,8 @@ import 'features/auth/presentation/pages/register_page.dart';
 import 'features/auth/presentation/pages/email_verification_page.dart';
 import 'features/auth/presentation/pages/forgot_password_page.dart';
 import 'features/news/presentation/pages/news_home_page.dart';
+import 'features/news/presentation/pages/smart_news_home_page.dart';
+import 'features/news/presentation/pages/news_detail_wrapper.dart';
 import 'features/splash/splash_screen.dart';
 
 // Import news files
@@ -50,6 +52,10 @@ import 'features/notification/data/datasources/user_behavior_datasource.dart';
 import 'features/notification/data/repositories/notification_repository_impl.dart';
 import 'features/notification/data/repositories/user_behavior_repository_impl.dart';
 import 'features/notification/data/services/gemini_recommendation_service.dart';
+import 'features/notification/data/services/auto_notification_service.dart';
+import 'features/notification/data/services/user_activity_trigger_service.dart';
+import 'features/notification/data/services/reading_history_service.dart';
+import 'features/notification/data/services/notification_navigation_service.dart';
 import 'features/notification/domain/usecases/get_notifications_usecase.dart';
 import 'features/notification/domain/usecases/get_smart_notif_usecase.dart';
 import 'features/notification/domain/usecases/analyze_user_behavior_usecase.dart';
@@ -79,8 +85,63 @@ void main() async {
 
   // Setup timeago Vietnamese locale
   setupTimeagoLocale();
+  
+  // Setup global user activity trigger service
+  await _setupUserActivityTrigger();
+  
+  // Initialize reading history service
+  initializeReadingHistoryService();
 
   runApp(MyApp(prefs: prefs));
+}
+
+/// Global instance để trigger khi user mở app
+late UserActivityTriggerService _globalUserActivityTrigger;
+
+/// Setup user activity trigger service globally
+Future<void> _setupUserActivityTrigger() async {
+  try {
+    final notificationDataSource = NotificationDataSource(
+      firestore: FirebaseFirestore.instance,
+      messaging: FirebaseMessaging.instance,
+      localNotifications: FlutterLocalNotificationsPlugin(),
+    );
+    
+    await notificationDataSource.initializeLocalNotifications();
+    
+    final geminiService = GeminiRecommendationService();
+    final autoNotificationService = AutoNotificationService(
+      firestore: FirebaseFirestore.instance,
+      notificationDataSource: notificationDataSource,
+      geminiService: geminiService,
+    );
+    
+    _globalUserActivityTrigger = UserActivityTriggerService(
+      firestore: FirebaseFirestore.instance,
+      autoNotificationService: autoNotificationService,
+      geminiService: geminiService,
+    );
+    
+    print('✅ User activity trigger service initialized');
+  } catch (e) {
+    print('❌ Error setting up user activity trigger: $e');
+  }
+}
+
+/// Trigger khi user mở app - gọi từ AuthWrapper hoặc HomePage
+Future<void> triggerUserOpenedApp(String userId) async {
+  try {
+    await _globalUserActivityTrigger.onUserOpenApp(userId);
+    
+    // Log activity
+    await _globalUserActivityTrigger.logUserActivity(
+      userId, 
+      'app_opened',
+      metadata: {'timestamp': DateTime.now().toIso8601String()},
+    );
+  } catch (e) {
+    print('❌ Error triggering user opened app: $e');
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -101,6 +162,9 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     // Khởi tạo deep link service với navigator key
     _deepLinkService.initializeWithNavigatorKey(_navigatorKey);
+    
+    // Set navigator key cho notification navigation
+    notificationNavigationService.setNavigatorKey(_navigatorKey);
   }
 
   @override
@@ -235,7 +299,7 @@ class _MyAppState extends State<MyApp> {
           '/login': (context) => const LoginPage(),
           '/register': (context) => const RegisterPage(),
           '/forgot-password': (context) => const ForgotPasswordPage(),
-          '/home': (context) => const NewsHomePage(),
+          '/home': (context) => const SmartNewsHomePage(),
           '/admin': (context) => const AdminDashboardPage(),
           '/admin/add-news': (context) => const AddNewsPage(),
           '/notifications': (context) => const NotificationsPage(),
@@ -251,6 +315,15 @@ class _MyAppState extends State<MyApp> {
               builder: (context) => EmailVerificationPage(email: email),
             );
           }
+          
+          // Handle news detail route from notification
+          if (settings.name == '/news-detail') {
+            final newsId = settings.arguments as String;
+            return MaterialPageRoute(
+              builder: (context) => NewsDetailWrapper(newsId: newsId),
+            );
+          }
+          
           return null;
         },
       ),
@@ -280,8 +353,8 @@ class AuthWrapper extends StatelessWidget {
             // Admin → vào trang admin
             return const AdminDashboardPage();
           } else {
-            // User → vào trang home
-            return const NewsHomePage();
+            // User → vào trang home với smart trigger
+            return const SmartNewsHomePage();
           }
         } else {
           // Chưa đăng nhập → login
