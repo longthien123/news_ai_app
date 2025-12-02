@@ -22,6 +22,7 @@ import '../widgets/news_home_widgets.dart';
 import 'news_saved.dart';
 import 'news_search_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../../main.dart'; // Import triggerUserOpenedApp
 
 class NewsHomePage extends StatelessWidget {
   const NewsHomePage({super.key});
@@ -68,6 +69,10 @@ class _NewsHomeViewState extends State<NewsHomeView> {
     'Số hóa',
     'Xe',
   ];
+  
+  // Static flag để tránh trigger lặp giữa các instances
+  static bool _isTriggering = false;
+  static DateTime? _lastTriggerTime;
 
   @override
   void initState() {
@@ -75,6 +80,51 @@ class _NewsHomeViewState extends State<NewsHomeView> {
     _loadNotifications();
     _autoCheckNewNotifications();
     _setupForegroundMessaging();
+    _triggerSmartNotificationsOnAppOpen(); // Auto trigger smart notifications
+  }
+  
+  /// Tự động trigger smart notifications khi user mở app
+  void _triggerSmartNotificationsOnAppOpen() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      // Check nếu đang trigger hoặc vừa trigger trong 30 giây qua
+      final now = DateTime.now();
+      if (_isTriggering) {
+        print('⚠️ Smart notifications is already triggering, skipping...');
+        return;
+      }
+      
+      if (_lastTriggerTime != null && 
+          now.difference(_lastTriggerTime!).inSeconds < 30) {
+        print('⚠️ Smart notifications triggered ${now.difference(_lastTriggerTime!).inSeconds}s ago, skipping...');
+        return;
+      }
+      
+      // Set flags
+      _isTriggering = true;
+      _lastTriggerTime = now;
+      
+      print('🚀 [${DateTime.now()}] Auto-triggering smart notifications for user: ${user.uid}');
+      
+      // Chạy ngầm không block UI
+      triggerUserOpenedApp(user.uid).then((_) {
+        print('✅ [${DateTime.now()}] Smart notifications triggered successfully');
+        // Refresh notification badge after trigger
+        if (mounted) {
+          context.read<NotificationCubit>().loadNotifications(user.uid);
+        }
+        _isTriggering = false;
+      }).catchError((e) {
+        print('❌ Error triggering smart notifications: $e');
+        _isTriggering = false;
+      });
+      
+    } catch (e) {
+      print('❌ Error in auto-trigger: $e');
+      _isTriggering = false;
+    }
   }
   
   void _setupForegroundMessaging() {
@@ -90,9 +140,16 @@ class _NewsHomeViewState extends State<NewsHomeView> {
           localNotifications: FlutterLocalNotificationsPlugin(),
         );
         
+        // Lấy newsId từ message data để truyền vào payload
+        final newsId = message.data['newsId'];
+        final payload = newsId != null && newsId.isNotEmpty 
+          ? {'newsId': newsId}
+          : null;
+        
         notificationDataSource.showLocalNotification(
           title: message.notification!.title ?? 'Thông báo mới',
           body: message.notification!.body ?? '',
+          payload: payload,
         );
         
         // Auto refresh badge count
@@ -105,9 +162,15 @@ class _NewsHomeViewState extends State<NewsHomeView> {
     
     // Handle notification taps (when app is in background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('📱 Notification tapped: ${message.notification?.title}');
-      // Navigate to notifications page
-      Navigator.pushNamed(context, '/notifications');
+      print('📱 User clicked notification: ${message.data}');
+      
+      // Lấy newsId từ message data
+      final newsId = message.data['newsId'];
+      if (newsId != null && newsId.isNotEmpty) {
+        Navigator.pushNamed(context, '/news-detail', arguments: newsId);
+      } else {
+        Navigator.pushNamed(context, '/notifications');
+      }
     });
   }
 

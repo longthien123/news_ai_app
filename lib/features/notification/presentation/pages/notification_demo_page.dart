@@ -10,6 +10,9 @@ import '../../data/datasources/notification_datasource.dart';
 import '../../data/services/gemini_recommendation_service.dart';
 import '../../data/models/smart_notification_model.dart';
 import '../../domain/entities/smart_notification.dart';
+import '../../../../main.dart'; // Import triggerUserOpenedApp
+import '../cubit/notification_cubit.dart'; // Import NotificationCubit
+import 'package:flutter_bloc/flutter_bloc.dart'; // Import BLoC
 
 /// Demo page để test notification thật trên máy
 class NotificationDemoPage extends StatefulWidget {
@@ -331,6 +334,11 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
         body: personalizedBody,
       );
 
+      // Reload notification list để update badge
+      final notificationCubit = context.read<NotificationCubit>();
+      await notificationCubit.loadNotifications(user.uid);
+      print('🔄 Smart Notification - Refreshed notification list');
+
       setState(() => _status = '✅ Smart Notification đã gửi!\n'
           '📊 AI Relevance Score: ${relevanceScore.toStringAsFixed(2)}\n'
           '💬 Body: "$personalizedBody"\n'
@@ -373,6 +381,11 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
 
       // Save to Firestore
       await _notificationDataSource.saveNotification(notification);
+      
+      // Reload notification list để update badge
+      final notificationCubit = context.read<NotificationCubit>();
+      await notificationCubit.loadNotifications(user.uid);
+      print('🔄 Breaking News - Refreshed notification list');
       
       await _showWebNotification(
         '⚡ TIN KHẨN CẤP',
@@ -445,6 +458,48 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
       
       setState(() => _status = '✅ Đã gửi 3 thông báo!\n💾 Đã lưu vào Firestore\n🔔 Vào danh sách thông báo để xem');
     } catch (e) {
+      setState(() => _status = '❌ Lỗi: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+  
+  /// Trigger smart notification dựa trên category analysis
+  Future<void> _triggerSmartNotificationByCategory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => _status = '❌ Vui lòng đăng nhập trước');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _status = '🔍 Đang phân tích reading history...';
+    });
+
+    try {
+      print('🎯 Triggering smart notification for user: ${user.uid}');
+      
+      // Gọi hàm trigger từ main.dart
+      // checkAndCreateNotifications() bên trong ĐÃ GỌI showLocalNotification() rồi!
+      await triggerUserOpenedApp(user.uid);
+      
+      print('✅ Trigger completed!');
+      
+      // Đợi 2 giây để user thấy popup
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Reload notification list để update badge
+      final notificationCubit = context.read<NotificationCubit>();
+      await notificationCubit.loadNotifications(user.uid);
+      print('🔄 Notification list refreshed');
+      
+      setState(() => _status = '✅ Smart Trigger hoàn tất!\n'
+          '📊 Phân tích dựa trên reading history\n'
+          '🎯 Đã gửi notifications phù hợp\n'
+          '🔔 Notification popup đã hiện (nếu có tin mới)');
+    } catch (e) {
+      print('❌ Error triggering: $e');
       setState(() => _status = '❌ Lỗi: $e');
     } finally {
       setState(() => _isLoading = false);
@@ -538,6 +593,16 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
               description: 'Sử dụng Gemini để cá nhân hóa nội dung',
               color: Colors.purple,
               onPressed: _isLoading ? null : _sendSmartNotification,
+            ),
+            const SizedBox(height: 12),
+            
+            // Trigger smart notification based on reading history
+            _buildNotificationButton(
+              icon: Icons.category,
+              title: '🎯 Smart Trigger (Category Analysis)',
+              description: 'Phân tích category đã đọc và gửi tin phù hợp',
+              color: Colors.teal,
+              onPressed: _isLoading ? null : _triggerSmartNotificationByCategory,
             ),
             const SizedBox(height: 12),
 
