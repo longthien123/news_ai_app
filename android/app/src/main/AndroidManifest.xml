@@ -30,6 +30,27 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            
+            <!-- Deep Link intent filter for HTTPS/HTTP -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="4tk-news.vercel.app"
+                      android:pathPrefix="/share"/>
+                <data android:scheme="http"
+                      android:host="4tk-news.vercel.app"
+                      android:pathPrefix="/share"/>
+            </intent-filter>
+            
+            <!-- Deep Link intent filter for Custom Scheme -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="newsai"/>
+            </intent-filter>
         </activity>
         
         <!-- Firebase Cloud Messaging -->

@@ -59,6 +59,7 @@ import 'features/notification/presentation/pages/notifications_page.dart';
 import 'features/notification/presentation/pages/notification_settings_page.dart';
 import 'features/notification/presentation/pages/notification_demo_page.dart';
 import 'features/notification/presentation/pages/notification_test_page.dart';
+import 'core/services/deep_link_service.dart';
 
 // Handle FCM background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -82,16 +83,37 @@ void main() async {
   runApp(MyApp(prefs: prefs));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final SharedPreferences prefs;
 
   const MyApp({super.key, required this.prefs});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final DeepLinkService _deepLinkService = DeepLinkService();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Khởi tạo deep link service với navigator key
+    _deepLinkService.initializeWithNavigatorKey(_navigatorKey);
+  }
+
+  @override
+  void dispose() {
+    _deepLinkService.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Setup Auth dependencies
     final userRemoteSource = UserRemoteSourceImpl();
-    final userLocalSource = UserLocalSourceImpl(prefs: prefs);
+    final userLocalSource = UserLocalSourceImpl(prefs: widget.prefs);
     final userRepository = UserRepoImpl(
       remote: userRemoteSource,
       local: userLocalSource,
@@ -105,7 +127,7 @@ class MyApp extends StatelessWidget {
 
     // Setup News dependencies
     final newsRemoteSource = NewsRemoteSourceImpl();
-    final newsLocalSource = NewsLocalSourceImpl(prefs: prefs);
+    final newsLocalSource = NewsLocalSourceImpl(prefs: widget.prefs);
     final newsRepository = NewsRepoImpl(
       remote: newsRemoteSource,
       local: newsLocalSource,
@@ -199,6 +221,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: 'News App',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -251,7 +274,7 @@ class AuthWrapper extends StatelessWidget {
           );
         } else if (state is Authenticated) {
           // ✅ Kiểm tra email để route đúng
-          final email = state.user.email ?? '';
+          final email = state.user.email;
 
           if (adminEmails.contains(email)) {
             // Admin → vào trang admin

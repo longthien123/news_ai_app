@@ -71,6 +71,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
 
   # Deep Linking
+  # deep 
   app_links: ^6.3.3
   firebase_dynamic_links: ^6.1.10
 

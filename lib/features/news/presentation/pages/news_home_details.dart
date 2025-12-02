@@ -20,6 +20,8 @@ import '../../../notification/data/models/reading_session_model.dart';
 import '../../../../core/utils/tts_service.dart';
 import 'package:share_plus/share_plus.dart';
 
+//news
+
 class NewsDetailPage extends StatefulWidget {
   final News news;
 
