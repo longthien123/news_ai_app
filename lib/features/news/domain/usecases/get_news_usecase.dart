@@ -17,4 +17,9 @@ class GetNewsUseCase {
   Future<List<News>> getNewsByCategory(String category) async {
     return await repository.getNewsByCategory(category);
   }
+
+  // ⭐ AI Recommendation
+  Future<List<News>> getRecommendedNews(String userId) async {
+    return await repository.getRecommendedNews(userId);
+  }
 }

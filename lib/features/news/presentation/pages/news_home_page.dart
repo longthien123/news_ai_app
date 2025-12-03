@@ -23,6 +23,7 @@ import 'news_saved.dart';
 import 'news_search_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../../main.dart'; // Import triggerUserOpenedApp
+import 'ai_recommendation_page.dart'; // ⭐ AI Recommendation
 
 class NewsHomePage extends StatelessWidget {
   const NewsHomePage({super.key});
@@ -626,16 +627,26 @@ class _NewsHomeViewState extends State<NewsHomeView> {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 0,
         onTap: (index) {
-          if (index == 2) {
-            // Navigate to Library/Saved News page
+          // ⭐ AI Recommendation: Navigate to AI page
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AIRecommendationPage(),
+              ),
+            );
+          }
+          // Navigate to Library/Saved News page
+          else if (index == 2) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => const SavedNewsPage(),
               ),
             );
-          } else if (index == 3) {
-            // Navigate to Profile page
+          }
+          // Navigate to Profile page
+          else if (index == 3) {
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -643,7 +654,6 @@ class _NewsHomeViewState extends State<NewsHomeView> {
               ),
             );
           }
-          // TODO: Handle other navigation items
         },
       ),
     );

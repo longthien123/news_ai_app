@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ⭐ AI Recommendation
 import '../../domain/entities/news.dart';
 import '../../domain/usecases/get_news_usecase.dart';
 
@@ -50,7 +51,12 @@ class NewsCubit extends Cubit<NewsState> {
       final breakingNews = await getNewsUseCase.getBreakingNews();
       
       List<News> newsList;
-      if (category != null && category.isNotEmpty) {
+      
+      // ⭐ AI Recommendation: Kiểm tra category "Gợi ý cho bạn"
+      if (category == 'Gợi ý cho bạn') {
+        final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        newsList = await getNewsUseCase.getRecommendedNews(userId);
+      } else if (category != null && category.isNotEmpty) {
         newsList = await getNewsUseCase.getNewsByCategory(category);
       } else {
         newsList = await getNewsUseCase.getAllNews();
@@ -75,8 +81,16 @@ class NewsCubit extends Cubit<NewsState> {
       if (currentState is NewsLoaded) {
         _selectedCategory = category;
         
-        // Filter from all news without showing loading
-        List<News> newsList = await getNewsUseCase.getNewsByCategory(category);
+        List<News> newsList;
+        
+        // ⭐ AI Recommendation: Kiểm tra category "Gợi ý cho bạn"
+        if (category == 'Gợi ý cho bạn') {
+          emit(NewsLoading());
+          final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+          newsList = await getNewsUseCase.getRecommendedNews(userId);
+        } else {
+          newsList = await getNewsUseCase.getNewsByCategory(category);
+        }
         
         emit(NewsLoaded(
           breakingNews: currentState.breakingNews,
