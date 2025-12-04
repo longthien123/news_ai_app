@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/news_cubit.dart';
 import '../../data/models/external_news_model.dart';
 import '../widgets/rss_picker_dialog.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 
 class AddNewsPage extends StatefulWidget {
   const AddNewsPage({super.key});
@@ -37,6 +39,12 @@ class _AddNewsPageState extends State<AddNewsPage> {
     'Xe',
     'Tổng hợp',
   ];
+
+  final CloudinaryPublic _cloudinary = CloudinaryPublic(
+    'dcr56rtwl', // Thay bằng cloud name của bạn
+    'news_upload', // Thay bằng upload preset của bạn
+    cache: false,
+  );
 
   @override
   void initState() {
@@ -124,10 +132,39 @@ class _AddNewsPageState extends State<AddNewsPage> {
     );
   }
 
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Đang upload ảnh...')));
+
+    try {
+      final response = await _cloudinary.uploadFile(
+        CloudinaryFile.fromFile(
+          picked.path,
+          resourceType: CloudinaryResourceType.Image,
+        ),
+      );
+      setState(() {
+        _imageUrls.add(response.secureUrl);
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('✅ Upload thành công!')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Upload thất bại: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -150,7 +187,10 @@ class _AddNewsPageState extends State<AddNewsPage> {
               icon: const Icon(Icons.flash_on, color: Colors.white, size: 20),
               label: const Text(
                 'Thêm nhanh',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -176,7 +216,9 @@ class _AddNewsPageState extends State<AddNewsPage> {
                 ),
               ),
             );
-            Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/admin', (route) => false);
           } else if (state is NewsError && state is! ExternalNewsLoading) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -206,10 +248,7 @@ class _AddNewsPageState extends State<AddNewsPage> {
                   const SizedBox(height: 16),
                   Text(
                     'Đang xử lý...',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
                   ),
                 ],
               ),
@@ -260,7 +299,7 @@ class _AddNewsPageState extends State<AddNewsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Title section
                   _buildSectionLabel('Tiêu đề bài viết', Icons.title),
                   const SizedBox(height: 8),
@@ -289,11 +328,12 @@ class _AddNewsPageState extends State<AddNewsPage> {
                     ),
                     maxLines: 2,
                     style: const TextStyle(fontSize: 16),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Vui lòng nhập tiêu đề' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Vui lòng nhập tiêu đề'
+                        : null,
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Content section
                   _buildSectionLabel('Nội dung bài viết', Icons.description),
                   const SizedBox(height: 8),
@@ -317,17 +357,21 @@ class _AddNewsPageState extends State<AddNewsPage> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: Icon(Icons.article, color: colorScheme.primary),
+                      prefixIcon: Icon(
+                        Icons.article,
+                        color: colorScheme.primary,
+                      ),
                       contentPadding: const EdgeInsets.all(16),
                       alignLabelWithHint: true,
                     ),
                     maxLines: 8,
                     style: const TextStyle(fontSize: 16, height: 1.5),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Vui lòng nhập nội dung' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Vui lòng nhập nội dung'
+                        : null,
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Category and Source row
                   Row(
                     children: [
@@ -345,7 +389,9 @@ class _AddNewsPageState extends State<AddNewsPage> {
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.grey[300]!),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -361,7 +407,10 @@ class _AddNewsPageState extends State<AddNewsPage> {
                                   vertical: 12,
                                 ),
                               ),
-                              icon: Icon(Icons.arrow_drop_down, color: colorScheme.primary),
+                              icon: Icon(
+                                Icons.arrow_drop_down,
+                                color: colorScheme.primary,
+                              ),
                               items: _categories
                                   .map(
                                     (cat) => DropdownMenuItem(
@@ -381,7 +430,7 @@ class _AddNewsPageState extends State<AddNewsPage> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Source section
                   _buildSectionLabel('Nguồn tin', Icons.source),
                   const SizedBox(height: 8),
@@ -405,15 +454,19 @@ class _AddNewsPageState extends State<AddNewsPage> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: Icon(Icons.newspaper, color: colorScheme.primary),
+                      prefixIcon: Icon(
+                        Icons.newspaper,
+                        color: colorScheme.primary,
+                      ),
                       contentPadding: const EdgeInsets.all(16),
                     ),
                     style: const TextStyle(fontSize: 16),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Vui lòng nhập nguồn tin' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Vui lòng nhập nguồn tin'
+                        : null,
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Image section
                   _buildSectionLabel('Hình ảnh minh họa', Icons.photo_library),
                   const SizedBox(height: 8),
@@ -429,47 +482,21 @@ class _AddNewsPageState extends State<AddNewsPage> {
                         Row(
                           children: [
                             Expanded(
-                              child: TextField(
+                              child: TextFormField(
                                 controller: _imageUrlController,
-                                decoration: InputDecoration(
-                                  hintText: 'Nhập URL hình ảnh...',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: colorScheme.primary,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  prefixIcon: Icon(Icons.link, color: Colors.grey[600]),
-                                  contentPadding: const EdgeInsets.all(12),
+                                decoration: const InputDecoration(
+                                  labelText: 'Thêm URL ảnh',
                                 ),
-                                onSubmitted: (_) => _addImageUrl(),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            ElevatedButton.icon(
+                            IconButton(
+                              icon: const Icon(Icons.add),
                               onPressed: _addImageUrl,
-                              icon: const Icon(Icons.add, size: 20),
-                              label: const Text('Thêm'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                elevation: 0,
-                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.image),
+                              tooltip: 'Chọn ảnh từ thiết bị',
+                              onPressed: _pickAndUploadImage,
                             ),
                           ],
                         ),
@@ -496,66 +523,47 @@ class _AddNewsPageState extends State<AddNewsPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _imageUrls.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
-                            itemBuilder: (_, idx) {
-                              final url = _imageUrls[idx];
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey[200]!),
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.all(8),
-                                  leading: ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
+                          SizedBox(
+                            height: 100,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _imageUrls.length,
+                              itemBuilder: (context, idx) => Stack(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.all(8),
                                     child: Image.network(
-                                      url,
-                                      width: 70,
-                                      height: 70,
+                                      _imageUrls[idx],
+                                      width: 100,
+                                      height: 100,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        width: 70,
-                                        height: 70,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[300],
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: GestureDetector(
+                                      onTap: () => _removeImageAt(idx),
+                                      child: Container(
+                                        color: Colors.black54,
                                         child: const Icon(
-                                          Icons.broken_image,
-                                          size: 30,
-                                          color: Colors.grey,
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 20,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  title: Text(
-                                    url,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => _removeImageAt(idx),
-                                  ),
-                                ),
-                              );
-                            },
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ],
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Submit button
                   ElevatedButton(
                     onPressed: _submit,
