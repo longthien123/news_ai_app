@@ -3,6 +3,8 @@ import 'package:equatable/equatable.dart';
 import '../../domain/entities/news.dart';
 import '../../domain/repositories/news_repository.dart';
 import '../../../../core/local/firebase_bookmark_manager.dart';
+import '../../../../core/services/offline_storage_service.dart';
+import '../../../../core/services/connectivity_service.dart';
 
 // States
 abstract class SavedNewsState extends Equatable {
@@ -16,11 +18,15 @@ class SavedNewsLoading extends SavedNewsState {}
 
 class SavedNewsLoaded extends SavedNewsState {
   final List<News> savedNews;
+  final bool isOfflineMode;
 
-  SavedNewsLoaded({required this.savedNews});
+  SavedNewsLoaded({
+    required this.savedNews, 
+    this.isOfflineMode = false,
+  });
 
   @override
-  List<Object?> get props => [savedNews];
+  List<Object?> get props => [savedNews, isOfflineMode];
 }
 
 class SavedNewsEmpty extends SavedNewsState {}
@@ -38,6 +44,8 @@ class SavedNewsError extends SavedNewsState {
 class SavedNewsCubit extends Cubit<SavedNewsState> {
   final NewsRepository newsRepository;
   final FirebaseBookmarkManager bookmarkManager;
+  final OfflineStorageService offlineStorage = OfflineStorageService();
+  final ConnectivityService connectivityService = ConnectivityService();
   List<News> _allSavedNews = [];
 
   SavedNewsCubit({
@@ -49,6 +57,23 @@ class SavedNewsCubit extends Cubit<SavedNewsState> {
     try {
       emit(SavedNewsLoading());
 
+      // Kiểm tra kết nối mạng
+      final hasConnection = await connectivityService.checkConnection();
+
+      if (hasConnection) {
+        // Có mạng: Load từ Firebase
+        await _loadFromFirebase();
+      } else {
+        // Không có mạng: Load từ offline storage
+        await _loadFromOffline();
+      }
+    } catch (e) {
+      emit(SavedNewsError('Không thể tải tin đã lưu: $e'));
+    }
+  }
+
+  Future<void> _loadFromFirebase() async {
+    try {
       // Get bookmarked news IDs
       final bookmarkedIds = await bookmarkManager.getBookmarkedNewsIds();
 
@@ -72,19 +97,53 @@ class SavedNewsCubit extends Cubit<SavedNewsState> {
       if (savedNews.isEmpty) {
         emit(SavedNewsEmpty());
       } else {
-        // Sort by most recent first (assuming newer IDs or we can sort by createdAt)
+        // Sort by most recent first
         savedNews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         _allSavedNews = savedNews;
-        emit(SavedNewsLoaded(savedNews: savedNews));
+        emit(SavedNewsLoaded(savedNews: savedNews, isOfflineMode: false));
       }
     } catch (e) {
-      emit(SavedNewsError('Không thể tải tin đã lưu: $e'));
+      print('❌ Error loading from Firebase: $e');
+      // Nếu lỗi khi load từ Firebase, thử load từ offline
+      await _loadFromOffline();
+    }
+  }
+
+  Future<void> _loadFromOffline() async {
+    try {
+      final savedNews = await offlineStorage.getSavedNews();
+
+      if (savedNews.isEmpty) {
+        emit(SavedNewsEmpty());
+      } else {
+        // Sort by most recent first
+        savedNews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _allSavedNews = savedNews;
+        emit(SavedNewsLoaded(savedNews: savedNews, isOfflineMode: true));
+      }
+    } catch (e) {
+      emit(SavedNewsError('Không thể tải tin đã lưu offline: $e'));
+    }
+  }
+
+  /// Lưu tin vào offline storage
+  Future<bool> saveNewsOffline(News news) async {
+    try {
+      return await offlineStorage.saveNews(news);
+    } catch (e) {
+      print('❌ Error saving news offline: $e');
+      return false;
     }
   }
 
   Future<void> removeBookmark(String newsId) async {
     try {
+      // Xóa từ Firebase bookmark
       await bookmarkManager.removeBookmark(newsId);
+      
+      // Xóa từ offline storage
+      await offlineStorage.removeNews(newsId);
+      
       await loadSavedNews(); // Reload the list
     } catch (e) {
       emit(SavedNewsError('Không thể xóa tin đã lưu: $e'));
@@ -97,7 +156,13 @@ class SavedNewsCubit extends Cubit<SavedNewsState> {
 
   void searchSavedNews(String query) {
     if (query.trim().isEmpty) {
-      emit(SavedNewsLoaded(savedNews: _allSavedNews));
+      final currentState = state;
+      if (currentState is SavedNewsLoaded) {
+        emit(SavedNewsLoaded(
+          savedNews: _allSavedNews, 
+          isOfflineMode: currentState.isOfflineMode,
+        ));
+      }
       return;
     }
 
@@ -108,10 +173,13 @@ class SavedNewsCubit extends Cubit<SavedNewsState> {
       return lowerTitle.contains(lowerQuery) || lowerCategory.contains(lowerQuery);
     }).toList();
 
+    final currentState = state;
+    final isOffline = currentState is SavedNewsLoaded ? currentState.isOfflineMode : false;
+
     if (filteredNews.isEmpty) {
       emit(SavedNewsEmpty());
     } else {
-      emit(SavedNewsLoaded(savedNews: filteredNews));
+      emit(SavedNewsLoaded(savedNews: filteredNews, isOfflineMode: isOffline));
     }
   }
 }

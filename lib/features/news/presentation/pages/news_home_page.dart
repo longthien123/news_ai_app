@@ -24,6 +24,7 @@ import 'news_search_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../../main.dart'; // Import triggerUserOpenedApp
 import 'ai_recommendation_page.dart'; // ⭐ AI Recommendation
+import '../../../../core/services/connectivity_service.dart';
 
 class NewsHomePage extends StatelessWidget {
   const NewsHomePage({super.key});
@@ -74,14 +75,45 @@ class _NewsHomeViewState extends State<NewsHomeView> {
   // Static flag để tránh trigger lặp giữa các instances
   static bool _isTriggering = false;
   static DateTime? _lastTriggerTime;
+  
+  // Connectivity
+  bool _hasConnection = true;
+  final ConnectivityService _connectivityService = ConnectivityService();
 
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
-    _autoCheckNewNotifications();
-    _setupForegroundMessaging();
-    _triggerSmartNotificationsOnAppOpen(); // Auto trigger smart notifications
+    _checkConnectionAndInit();
+  }
+  
+  /// Kiểm tra kết nối mạng khi khởi động app
+  Future<void> _checkConnectionAndInit() async {
+    final hasConnection = await _connectivityService.checkConnection();
+    
+    if (mounted) {
+      setState(() {
+        _hasConnection = hasConnection;
+      });
+    }
+    
+    if (!hasConnection) {
+      // Không có mạng: Hiển thị thông báo
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📵 Không có kết nối mạng. Chỉ có thể xem tin đã lưu trong Thư viện.'),
+            duration: Duration(seconds: 4),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } else {
+      // Có mạng: Chạy các chức năng bình thường
+      _loadNotifications();
+      _autoCheckNewNotifications();
+      _setupForegroundMessaging();
+      _triggerSmartNotificationsOnAppOpen();
+    }
   }
   
   /// Tự động trigger smart notifications khi user mở app
@@ -400,8 +432,10 @@ class _NewsHomeViewState extends State<NewsHomeView> {
             ),
           ),
           Expanded(
-            child: BlocBuilder<NewsCubit, NewsState>(
-              builder: (context, state) {
+            child: !_hasConnection
+                ? _buildOfflineMode()
+                : BlocBuilder<NewsCubit, NewsState>(
+                    builder: (context, state) {
           if (state is NewsLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -619,8 +653,8 @@ class _NewsHomeViewState extends State<NewsHomeView> {
           }
 
           return const SizedBox();
-              },
-            ),
+                    },
+                  ),
           ),
         ],
       ),
@@ -629,6 +663,15 @@ class _NewsHomeViewState extends State<NewsHomeView> {
         onTap: (index) {
           // ⭐ AI Recommendation: Navigate to AI page
           if (index == 1) {
+            if (!_hasConnection) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Chức năng này cần kết nối mạng'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -647,6 +690,15 @@ class _NewsHomeViewState extends State<NewsHomeView> {
           }
           // Navigate to Profile page
           else if (index == 3) {
+            if (!_hasConnection) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Chức năng này cần kết nối mạng'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -655,6 +707,98 @@ class _NewsHomeViewState extends State<NewsHomeView> {
             );
           }
         },
+      ),
+    );
+  }
+  
+  /// Widget hiển thị khi không có mạng (Offline Mode)
+  Widget _buildOfflineMode() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Ionicons.cloud_offline_outline,
+              size: 100,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Chế độ Offline',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Không có kết nối mạng.\nBạn có thể xem tin đã lưu trong Thư viện.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SavedNewsPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Ionicons.library_outline),
+              label: const Text('Mở Thư viện'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () async {
+                // Kiểm tra lại kết nối
+                final hasConnection = await _connectivityService.checkConnection();
+                if (mounted) {
+                  setState(() {
+                    _hasConnection = hasConnection;
+                  });
+                  
+                  if (hasConnection) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Đã kết nối mạng'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    _checkConnectionAndInit();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('❌ Vẫn chưa có kết nối mạng'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Ionicons.refresh_outline),
+              label: const Text('Kiểm tra lại kết nối'),
+            ),
+          ],
+        ),
       ),
     );
   }

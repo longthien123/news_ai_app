@@ -55,6 +55,9 @@ dependencies:
   # Local Storage
   shared_preferences: ^2.2.2
 
+  # Connectivity
+  connectivity_plus: ^6.0.5
+
   # AI
   google_generative_ai: ^0.4.7
   firebase_storage: ^12.4.10

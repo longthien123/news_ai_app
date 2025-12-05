@@ -250,24 +250,71 @@ class _SavedNewsViewState extends State<SavedNewsView> {
                 }
 
                 if (state is SavedNewsLoaded) {
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      context.read<SavedNewsCubit>().refresh();
-                    },
-                    color: AppColors.primary,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(27, 0, 27, 16),
-                      itemCount: state.savedNews.length,
-                      itemBuilder: (context, index) {
-                        final news = state.savedNews[index];
-                        return SavedNewsCard(
-                          news: news,
-                          onRemove: () {
-                            context.read<SavedNewsCubit>().removeBookmark(news.id);
+                  return Column(
+                    children: [
+                      // Offline mode indicator
+                      if (state.isOfflineMode)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 27,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.orange[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Ionicons.cloud_offline_outline,
+                                color: Colors.orange[700],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Chế độ Offline - Đang xem tin đã lưu',
+                                  style: TextStyle(
+                                    color: Colors.orange[900],
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // News list
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: () async {
+                            context.read<SavedNewsCubit>().refresh();
                           },
-                        );
-                      },
-                    ),
+                          color: AppColors.primary,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(27, 0, 27, 16),
+                            itemCount: state.savedNews.length,
+                            itemBuilder: (context, index) {
+                              final news = state.savedNews[index];
+                              return SavedNewsCard(
+                                news: news,
+                                onRemove: () {
+                                  context.read<SavedNewsCubit>().removeBookmark(news.id);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 }
 
