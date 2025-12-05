@@ -66,6 +66,7 @@ import 'features/notification/presentation/pages/notification_settings_page.dart
 import 'features/notification/presentation/pages/notification_demo_page.dart';
 import 'features/notification/presentation/pages/notification_test_page.dart';
 import 'core/services/deep_link_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Handle FCM background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -75,7 +76,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Set FCM background message handler

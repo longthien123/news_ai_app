@@ -1,10 +1,10 @@
 /// ⭐ Configuration riêng CHỈ cho AI Recommendation
 /// Tách biệt hoàn toàn với GeminiConfig để tránh conflict
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AIRecommendationConfig {
   // API key riêng dành cho AI Recommendation
-  // static const String apiKey = 'AIzaSyBYKvMaEbPe6uc_S2VPFZou7OEJBgxcGQo';
-  static const String apiKey = 'AIzaSyBhQbxCHwnt1wr2sbxzUVHDcLE7zQNyE9M';
-
+  
+  static final String apiKey = dotenv.env['AI_RECOMMENDATION_API_KEY'] ?? '';
 
   // Model name riêng cho AI Recommendation
   static const String modelName = 'gemini-2.0-flash';
