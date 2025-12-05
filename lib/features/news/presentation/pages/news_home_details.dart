@@ -21,6 +21,7 @@ import '../../../notification/data/services/reading_history_service.dart';
 import '../../../../core/utils/tts_service.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/reading_tracker_service.dart'; // ⭐ AI Recommendation Tracking
+import '../../../../core/services/offline_storage_service.dart';
 
 //news
 
@@ -805,6 +806,18 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
         widget.news.id,
       );
 
+      // Lưu hoặc xóa khỏi offline storage
+      final offlineStorage = OfflineStorageService();
+      if (isBookmarked) {
+        // Lưu vào offline storage khi bookmark
+        await offlineStorage.saveNews(widget.news);
+        print('✅ Saved news to offline storage: ${widget.news.title}');
+      } else {
+        // Xóa khỏi offline storage khi bỏ bookmark
+        await offlineStorage.removeNews(widget.news.id);
+        print('🗑️ Removed news from offline storage: ${widget.news.id}');
+      }
+
       if (mounted) {
         setState(() {
           _isBookmarked = isBookmarked;
@@ -814,7 +827,9 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isBookmarked ? 'Đã lưu tin tức' : 'Đã bỏ lưu tin tức',
+              isBookmarked 
+                  ? 'Đã lưu tin tức (có thể xem offline)' 
+                  : 'Đã bỏ lưu tin tức',
             ),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
