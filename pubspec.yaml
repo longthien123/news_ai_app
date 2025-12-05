@@ -73,6 +73,9 @@ dependencies:
   firebase_messaging: ^15.1.6
   flutter_local_notifications: ^18.0.1
 
+  #environment variables
+  flutter_dotenv: ^5.1.0
+
   # Deep Linking
   # deep 
   app_links: ^6.3.3
@@ -101,6 +104,7 @@ flutter:
   assets:
     - assets/images/
     - assets/rss_sources.json
+    - .env
   uses-material-design: true
 
 
